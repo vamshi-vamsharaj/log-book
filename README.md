@@ -1,36 +1,159 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📒 Log Book
 
-## Getting Started
+A modern full-stack personal productivity application built with **Next.js**, **TypeScript**, and **MongoDB** to help you organize your daily life. Log Book serves as your personal digital journal for managing tasks, tracking habits, recording daily logs, and monitoring productivity—all in one place.
 
-First, run the development server:
+> **Status:** 🚧 Under Development
+
+---
+
+## ✨ Features (Planned)
+
+* ✅ Daily Task Management
+* ✅ Task Priorities
+* ✅ Task Categories
+* ✅ Daily Logs & Journal
+* ✅ Habit Tracker
+* ✅ Goal Tracking
+* ✅ Calendar View
+* ✅ Productivity Dashboard
+* ✅ Search & Filters
+* ✅ Progress Analytics
+* ✅ Dark & Light Mode
+* ✅ Responsive Design
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+* Next.js (App Router)
+* React
+* TypeScript
+* Tailwind CSS
+* shadcn/ui
+* Lucide React
+
+### Backend
+
+* Next.js Route Handlers
+* Node.js
+* TypeScript
+
+### Database
+
+* MongoDB
+* Mongoose
+
+### Utilities
+
+* Zod
+* Axios
+* date-fns
+
+---
+
+## 📂 Project Status
+
+The project is currently in its initial development phase. Upcoming milestones include:
+
+* Project setup
+* Database integration
+* Authentication
+* Dashboard
+* Task management
+* Habit tracking
+* Daily journal
+* Analytics
+* Deployment
+
+---
+
+## 🚀 Getting Started
+
+### Clone the repository
+
+```bash
+git clone https://github.com/vamshi-vamsharaj/log-book.git
+```
+
+### Navigate to the project
+
+```bash
+cd log-book
+```
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Configure environment variables
+
+Create a `.env.local` file in the project root.
+
+```env
+MONGODB_URI=your_mongodb_connection_string
+
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### Start the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 📁 Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+| Variable              | Description               |
+| --------------------- | ------------------------- |
+| `MONGODB_URI`         | MongoDB connection string |
+| `NEXT_PUBLIC_APP_URL` | Application URL           |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🗺️ Roadmap
 
-## Deploy on Vercel
+* [x] Initialize project
+* [ ] Connect MongoDB
+* [ ] Create database models
+* [ ] Authentication
+* [ ] Dashboard
+* [ ] Task CRUD
+* [ ] Categories
+* [ ] Daily Logs
+* [ ] Habit Tracker
+* [ ] Calendar
+* [ ] Analytics
+* [ ] Settings
+* [ ] Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🤝 Contributing
+
+This is currently a personal project. Contributions, suggestions, and feedback are always welcome.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 👨‍💻 Author
+
+**Vamshi Vamsharaj**
+
+GitHub: https://github.com/vamshi-vamsharaj
