@@ -8,18 +8,137 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  ARCHIVED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum RepeatFrequency {
+  NONE
+  DAILY
+  WEEKDAYS
+  WEEKLY
+  MONTHLY
+  YEARLY
+  CUSTOM
+}
+
+enum GoalTimeframe {
+  LIFE
+  YEAR
+  QUARTER
+  MONTH
+  WEEK
+  DAY
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKDAYS
+  WEEKLY
+  CUSTOM
+}
+
+enum PlannerType {
+  DAY
+  WEEK
+  MONTH
+  QUARTER
+  SIX_MONTH
+  YEAR
+  LIFE
+  CAREER
+  LEARNING
+  FITNESS
+  FINANCIAL
+}
+
+enum ReminderType {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum NotificationType {
+  TASK_DUE
+  HABIT_STREAK
+  GOAL_MILESTONE
+  REMINDER
+  AI_SUMMARY
+  SYSTEM
+}
+
+enum Mood {
+  VERY_LOW
+  LOW
+  NEUTRAL
+  GOOD
+  GREAT
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+  DELETED
+  COMPLETED
+  ARCHIVED
+  RESTORED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
+  timezone      String    @default("UTC")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  sessions Session[]
-  accounts Account[]
+  sessions              Session[]
+  accounts              Account[]
+  categories            Category[]
+  labels                Label[]
+  tags                  Tag[]
+  tasks                 Task[]
+  goals                 Goal[]
+  habits                Habit[]
+  planners              Planner[]
+  calendarEvents        CalendarEvent[]
+  reminders             Reminder[]
+  journalEntries        JournalEntry[]
+  moodEntries           MoodEntry[]
+  notes                 Note[]
+  noteFolders           NoteFolder[]
+  productivitySnapshots ProductivitySnapshot[]
+  notifications         Notification[]
+  activityLogs          ActivityLog[]
+  preference            UserPreference?
 
+  @@index([email])
   @@map("users")
 }
 
@@ -71,4 +190,481 @@ model Verification {
 
   @@index([identifier])
   @@map("verifications")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String   @default("#6366f1")
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("categories")
+}
+
+model Label {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String   @default("#f43f5e")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks TaskLabel[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("labels")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks TaskTag[]
+  notes NoteTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}
+
+model Task {
+  id                String           @id @default(cuid())
+  userId            String
+  categoryId        String?
+  title             String
+  description       String?
+  status            TaskStatus       @default(TODO)
+  priority          TaskPriority     @default(MEDIUM)
+  dueDate           DateTime?
+  dueTime           String?
+  estimatedMinutes  Int?
+  actualMinutes     Int?
+  progress          Int              @default(0)
+  repeat            RepeatFrequency  @default(NONE)
+  repeatConfig      Json?
+  order             Int              @default(0)
+  archivedAt        DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subtasks        Subtask[]
+  labels          TaskLabel[]
+  tags            TaskTag[]
+  attachments     Attachment[]
+  reminders       Reminder[]
+  goalLinks       GoalTask[]
+  notes           NoteTask[]
+  calendarEvents  CalendarEvent[]
+
+  @@index([userId, status])
+  @@index([userId, dueDate])
+  @@index([categoryId])
+  @@map("tasks")
+}
+
+model Subtask {
+  id        String   @id @default(cuid())
+  taskId    String
+  title     String
+  completed Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("subtasks")
+}
+
+model TaskLabel {
+  taskId  String
+  labelId String
+
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+  @@index([labelId])
+  @@map("task_labels")
+}
+
+model TaskTag {
+  taskId String
+  tagId  String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+  @@index([tagId])
+  @@map("task_tags")
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+  @@index([tagId])
+  @@map("note_tags")
+}
+
+model NoteTask {
+  noteId String
+  taskId String
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, taskId])
+  @@index([taskId])
+  @@map("note_tasks")
+}
+
+model GoalTask {
+  goalId String
+  taskId String
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([goalId, taskId])
+  @@index([taskId])
+  @@map("goal_tasks")
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  taskId    String
+  fileName  String
+  fileUrl   String
+  fileType  String
+  fileSize  Int
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("attachments")
+}
+
+model Goal {
+  id          String        @id @default(cuid())
+  userId      String
+  parentId    String?
+  title       String
+  description String?
+  timeframe   GoalTimeframe
+  status      GoalStatus    @default(NOT_STARTED)
+  startDate   DateTime
+  endDate     DateTime?
+  progress    Int           @default(0)
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent     Goal?           @relation("GoalHierarchy", fields: [parentId], references: [id])
+  children   Goal[]          @relation("GoalHierarchy")
+  milestones GoalMilestone[]
+  tasks      GoalTask[]
+
+  @@index([userId, timeframe])
+  @@index([userId, status])
+  @@index([parentId])
+  @@map("goals")
+}
+
+model GoalMilestone {
+  id          String    @id @default(cuid())
+  goalId      String
+  title       String
+  dueDate     DateTime?
+  completedAt DateTime?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@map("goal_milestones")
+}
+
+model Habit {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  icon          String?
+  color         String         @default("#22c55e")
+  frequency     HabitFrequency @default(DAILY)
+  targetPerWeek Int            @default(7)
+  archivedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs HabitLog[]
+
+  @@index([userId])
+  @@map("habits")
+}
+
+model HabitLog {
+  id        String   @id @default(cuid())
+  habitId   String
+  date      DateTime
+  completed Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([habitId, date])
+  @@map("habit_logs")
+}
+
+model Planner {
+  id        String      @id @default(cuid())
+  userId    String
+  type      PlannerType
+  title     String
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items PlannerItem[]
+
+  @@index([userId, type])
+  @@map("planners")
+}
+
+model PlannerItem {
+  id        String    @id @default(cuid())
+  plannerId String
+  title     String
+  content   String?
+  completed Boolean   @default(false)
+  order     Int       @default(0)
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  planner Planner @relation(fields: [plannerId], references: [id], onDelete: Cascade)
+
+  @@index([plannerId])
+  @@map("planner_items")
+}
+
+model CalendarEvent {
+  id           String          @id @default(cuid())
+  userId       String
+  taskId       String?
+  title        String
+  description  String?
+  startAt      DateTime
+  endAt        DateTime
+  allDay       Boolean         @default(false)
+  color        String          @default("#3b82f6")
+  repeat       RepeatFrequency @default(NONE)
+  repeatConfig Json?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task      Task?      @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  reminders Reminder[]
+
+  @@index([userId, startAt])
+  @@index([taskId])
+  @@map("calendar_events")
+}
+
+model Reminder {
+  id              String       @id @default(cuid())
+  userId          String
+  taskId          String?
+  calendarEventId String?
+  type            ReminderType @default(IN_APP)
+  message         String
+  remindAt        DateTime
+  sentAt          DateTime?
+  createdAt       DateTime     @default(now())
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task          Task?          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  calendarEvent CalendarEvent? @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+
+  @@index([userId, remindAt])
+  @@index([taskId])
+  @@index([calendarEventId])
+  @@map("reminders")
+}
+
+model JournalEntry {
+  id         String   @id @default(cuid())
+  userId     String
+  date       DateTime
+  gratitude  String?
+  wins       String?
+  lessons    String?
+  challenges String?
+  ideas      String?
+  reflection String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moodEntries MoodEntry[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("journal_entries")
+}
+
+model MoodEntry {
+  id             String   @id @default(cuid())
+  userId         String
+  journalEntryId String?
+  mood           Mood
+  note           String?
+  loggedAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, loggedAt])
+  @@index([journalEntryId])
+  @@map("mood_entries")
+}
+
+model Note {
+  id         String    @id @default(cuid())
+  userId     String
+  folderId   String?
+  title      String
+  content    String
+  pinned     Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder NoteFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tags   NoteTag[]
+  tasks  NoteTask[]
+
+  @@index([userId, pinned])
+  @@index([folderId])
+  @@map("notes")
+}
+
+model NoteFolder {
+  id        String   @id @default(cuid())
+  userId    String
+  parentId  String?
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   NoteFolder?  @relation("NoteFolderHierarchy", fields: [parentId], references: [id])
+  children NoteFolder[] @relation("NoteFolderHierarchy")
+  notes    Note[]
+
+  @@unique([userId, parentId, name])
+  @@index([userId])
+  @@index([parentId])
+  @@map("note_folders")
+}
+
+model ProductivitySnapshot {
+  id                String   @id @default(cuid())
+  userId            String
+  date              DateTime
+  tasksCreated      Int      @default(0)
+  tasksCompleted    Int      @default(0)
+  habitsCompleted   Int      @default(0)
+  focusMinutes      Int      @default(0)
+  productivityScore Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("productivity_snapshots")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model UserPreference {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  theme                   Theme    @default(SYSTEM)
+  weekStartsOn            Int      @default(0)
+  notificationsEnabled    Boolean  @default(true)
+  emailDigestEnabled      Boolean  @default(true)
+  aiFeaturesEnabled       Boolean  @default(true)
+  defaultDashboardLayout  Json?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model ActivityLog {
+  id         String         @id @default(cuid())
+  userId     String
+  entityType String
+  entityId   String
+  action     ActivityAction
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@map("activity_logs")
 }
