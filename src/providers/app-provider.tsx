@@ -1,6 +1,6 @@
 "use client";
 
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { CommandPaletteProvider } from "@/contexts/command-palette-context";
 import { ThemeProvider } from "@/providers/theme-provider";
 
