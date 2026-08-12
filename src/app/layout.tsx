@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { siteConfig } from "@/config/site.config";
 import { cn } from "@/lib/utils";
+import { AppProvider } from "@/providers/app-provider";
 
 import "@/app/globals.css";
 
@@ -61,7 +62,7 @@ export default function RootLayout({
           fontMono.variable,
         )}
       >
-        {children}
+        <AppProvider>{children}</AppProvider>
       </body>
     </html>
   );
