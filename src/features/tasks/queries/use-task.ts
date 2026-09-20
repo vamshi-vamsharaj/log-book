@@ -22,21 +22,3 @@ export function useTask(id: string | null) {
     enabled: Boolean(id),
   });
 }
-
-async function fetchSubtasks(taskId: string): Promise<TaskDTO[]> {
-  const response = await fetch(`/api/tasks/${taskId}/subtasks`);
-
-  if (!response.ok) {
-    throw new Error("Failed to load subtasks");
-  }
-
-  return response.json();
-}
-
-export function useSubtasks(taskId: string | null) {
-  return useQuery({
-    queryKey: taskKeys.subtasks(taskId ?? ""),
-    queryFn: () => fetchSubtasks(taskId as string),
-    enabled: Boolean(taskId),
-  });
-}
