@@ -21,8 +21,10 @@ export function TaskCheckbox({ checked, onToggle }: TaskCheckboxProps) {
         onToggle();
       }}
       className={cn(
-        "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border transition-colors",
-        checked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/50",
+        "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border transition-colors",
+        checked
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-muted-foreground/50 hover:border-primary",
       )}
     >
       {checked ? <Check className="h-3 w-3" /> : null}
