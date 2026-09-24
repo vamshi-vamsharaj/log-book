@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { PageContainer } from "@/components/layout/page-container";
+import { TaskBacklog } from "@/features/tasks/components/task-backlog";
 
 export const metadata: Metadata = {
   title: "Tasks",
@@ -8,10 +9,8 @@ export const metadata: Metadata = {
 
 export default function TasksPage() {
   return (
-    <PageContainer title="Tasks" description="Manage everything you need to get done.">
-      <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-        Task management will be implemented in a future phase.
-      </div>
+    <PageContainer title="Tasks" description="Capture what you need to do, whenever it comes to mind.">
+      <TaskBacklog />
     </PageContainer>
   );
 }
