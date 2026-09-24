@@ -17,8 +17,6 @@ function isPrivateIpv4(ip: string): boolean {
 
   const [a, b] = parts;
 
-  if (a === undefined || b === undefined) return true;
-
   if (a === 10) return true;
   if (a === 127) return true;
   if (a === 0) return true;
@@ -61,14 +59,14 @@ function extractMeta(html: string, name: string): string | null {
   const propertyMatch = html.match(
     new RegExp(`<meta[^>]+property=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"),
   );
-  if (propertyMatch && propertyMatch[1]) {
+  if (propertyMatch) {
     return propertyMatch[1];
   }
 
   const nameMatch = html.match(
     new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"),
   );
-  return nameMatch && nameMatch[1] ? nameMatch[1] : null;
+  return nameMatch ? nameMatch[1] : null;
 }
 
 export async function GET(request: NextRequest) {
@@ -126,7 +124,7 @@ export async function GET(request: NextRequest) {
 
     const preview = {
       url: url.toString(),
-      title: extractMeta(html, "og:title") ?? (titleTagMatch && titleTagMatch[1] ? titleTagMatch[1].trim() : null),
+      title: extractMeta(html, "og:title") ?? (titleTagMatch ? titleTagMatch[1].trim() : null),
       description: extractMeta(html, "og:description") ?? extractMeta(html, "description"),
       siteName: extractMeta(html, "og:site_name") ?? url.hostname,
     };
