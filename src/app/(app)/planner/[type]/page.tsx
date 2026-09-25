@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/layout/page-container";
+import { TaskBoard } from "@/features/tasks/components/task-board";
+import { PLANNER_SLUG_TO_LEVEL } from "@/lib/period";
 
 const PLANNER_TITLES: Record<string, string> = {
   day: "Day Planner",
@@ -23,17 +25,15 @@ export async function generateMetadata({ params }: PlannerTypePageProps): Promis
 
 export default async function PlannerTypePage({ params }: PlannerTypePageProps) {
   const { type } = await params;
-  const title = PLANNER_TITLES[type];
+  const level = PLANNER_SLUG_TO_LEVEL[type];
 
-  if (!title) {
+  if (!level) {
     notFound();
   }
 
   return (
-    <PageContainer title={title} description="Structured planning for this timeframe.">
-      <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-        The {title.toLowerCase()} editor will be implemented in a future phase.
-      </div>
+    <PageContainer title={PLANNER_TITLES[type]} description="What do you want to accomplish in this period?">
+      <TaskBoard level={level} />
     </PageContainer>
   );
 }
