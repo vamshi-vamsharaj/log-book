@@ -1,5 +1,4 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { handleRouteError } from "@/lib/errors";
 import { requireApiUser } from "@/lib/session";
@@ -9,11 +8,12 @@ import * as taskService from "@/features/tasks/services/task.service";
 export async function GET(request: NextRequest) {
   try {
     const user = await requireApiUser();
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams.entries());
-    const query = listTasksQuerySchema.parse(searchParams);
-    const result = await taskService.listTasks(user.id, query);
+    const query = listTasksQuerySchema.parse(
+      Object.fromEntries(request.nextUrl.searchParams.entries()),
+    );
+    const tasks = await taskService.listTasks(user.id, query);
 
-    return NextResponse.json(result);
+    return NextResponse.json(tasks);
   } catch (error) {
     return handleRouteError(error);
   }
