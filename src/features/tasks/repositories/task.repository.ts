@@ -20,7 +20,7 @@ export async function findTaskWithChildren(userId: string, id: string) {
   });
 }
 
-export async function createTask(userId: string, data: Omit<Prisma.TaskUncheckedCreateInput, "userId">) {
+export async function createTask(userId: string, data: Prisma.TaskUncheckedCreateInput) {
   return db.task.create({ data: { ...data, userId } });
 }
 
