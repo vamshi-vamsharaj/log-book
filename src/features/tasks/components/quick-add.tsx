@@ -24,28 +24,37 @@ export function QuickAdd({ level, periodKey, scheduledDate, placeholder }: Quick
       return;
     }
 
-    await createTask.mutateAsync({
-      title: trimmed,
-      level,
-      periodKey: periodKey ?? undefined,
-      scheduledDate: scheduledDate ?? undefined,
-    });
-
-    setTitle("");
+    try {
+      await createTask.mutateAsync({
+        title: trimmed,
+        level,
+        periodKey: periodKey ?? undefined,
+        scheduledDate: scheduledDate ?? undefined,
+      });
+      setTitle("");
+    } catch {
+      // error is surfaced below via createTask.error
+    }
   }
 
   return (
-    <Input
-      value={title}
-      onChange={(event) => setTitle(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          handleSubmit();
-        }
-      }}
-      placeholder={placeholder ?? "Add a task and press Enter..."}
-      className="border-dashed"
-    />
+    <div className="space-y-1">
+      <Input
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            handleSubmit();
+          }
+        }}
+        placeholder={placeholder ?? "Add a task and press Enter..."}
+        disabled={createTask.isPending}
+        className="border-dashed"
+      />
+      {createTask.isError ? (
+        <p className="text-xs font-medium text-destructive">{createTask.error.message}</p>
+      ) : null}
+    </div>
   );
 }
