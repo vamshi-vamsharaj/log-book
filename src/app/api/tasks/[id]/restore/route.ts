@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { handleRouteError } from "@/lib/errors";
 import { requireApiUser } from "@/lib/session";
@@ -13,7 +14,6 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     const user = await requireApiUser();
     const { id } = await params;
     const task = await taskService.restoreTask(user.id, id);
-
     return NextResponse.json(task);
   } catch (error) {
     return handleRouteError(error);
