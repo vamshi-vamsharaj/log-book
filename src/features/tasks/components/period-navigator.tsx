@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { getPeriodLabel, type PlanningLevel } from "@/lib/period";
+import { formatPeriodLabel, localDateKey, periodKeyFor, type PlanningLevel } from "@/lib/period";
 
 interface PeriodNavigatorProps {
   level: PlanningLevel;
@@ -19,7 +19,7 @@ export function PeriodNavigator({ level, date, onChange, onToday }: PeriodNaviga
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <span className="min-w-[10rem] text-center text-sm font-medium">
-        {getPeriodLabel(level, date)}
+        {formatPeriodLabel(level, periodKeyFor(level, localDateKey(date)))}
       </span>
       <Button variant="outline" size="icon" aria-label="Next period" onClick={() => onChange(shift(level, date, 1))}>
         <ChevronRight className="h-4 w-4" />
