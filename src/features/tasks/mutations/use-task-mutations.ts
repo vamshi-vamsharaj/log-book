@@ -118,3 +118,15 @@ export function useDeriveTask() {
     },
   });
 }
+
+export function useCancelTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => requestJson<TaskDTO>(`/api/tasks/${id}/cancel`, "POST"),
+    onSuccess: (task) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(task.id) });
+    },
+  });
+}
