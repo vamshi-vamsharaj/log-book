@@ -5,19 +5,26 @@ import { useMemo, useState } from "react";
 import { QuickAdd } from "@/features/tasks/components/quick-add";
 import { TaskItem } from "@/features/tasks/components/task-item";
 import { TaskPeek } from "@/features/tasks/components/task-peek";
-import { useTasks } from "@/features/tasks/queries/use-tasks";
-import { getDayKey } from "@/lib/period";
-import type { TaskDTO } from "@/features/tasks/types";
+import {
+  usePeriodTasks,
+  type TaskDTO,
+} from "@/features/tasks/hooks/use-planner-tasks";
+import { localDateKey, periodKeyFor } from "@/lib/period";
 
 export function TaskBacklog() {
-  const { data: tasks, isLoading } = useTasks({ level: "DAY" });
-  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const todayKey = localDateKey(new Date());
+  const weekKey = periodKeyFor("WEEK", todayKey);
+
+  // Fetch all DAY-level tasks for the current week to power the backlog
+  const { data: tasks, isLoading } = usePeriodTasks("DAY", todayKey);
+  const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
 
   const groups = useMemo(() => {
-    const todayKey = getDayKey(new Date());
-    const tomorrow = new Date();
+    const today = new Date();
+    const todayStr = localDateKey(today);
+    const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowKey = getDayKey(tomorrow);
+    const tomorrowStr = localDateKey(tomorrow);
 
     const result = {
       today: [] as TaskDTO[],
@@ -34,11 +41,11 @@ export function TaskBacklog() {
 
       const key = task.scheduledDate.slice(0, 10);
 
-      if (key === todayKey) {
+      if (key === todayStr) {
         result.today.push(task);
-      } else if (key === tomorrowKey) {
+      } else if (key === tomorrowStr) {
         result.tomorrow.push(task);
-      } else if (key > todayKey) {
+      } else if (key > todayStr) {
         result.upcoming.push(task);
       } else {
         result.today.push(task);
@@ -48,6 +55,11 @@ export function TaskBacklog() {
     return result;
   }, [tasks]);
 
+  function handleOpen(id: string) {
+    const task = (tasks ?? []).find((t) => t.id === id) ?? null;
+    setOpenTask(task);
+  }
+
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading tasks...</p>;
   }
@@ -56,12 +68,17 @@ export function TaskBacklog() {
     <div className="space-y-6">
       <QuickAdd level="DAY" placeholder="Capture a task..." />
 
-      <Section title="Today" tasks={groups.today} onOpen={setOpenTaskId} />
-      <Section title="Tomorrow" tasks={groups.tomorrow} onOpen={setOpenTaskId} />
-      <Section title="Unscheduled" tasks={groups.unscheduled} onOpen={setOpenTaskId} />
-      <Section title="Upcoming" tasks={groups.upcoming} onOpen={setOpenTaskId} />
+      <Section title="Today" tasks={groups.today} onOpen={handleOpen} />
+      <Section title="Tomorrow" tasks={groups.tomorrow} onOpen={handleOpen} />
+      <Section title="Unscheduled" tasks={groups.unscheduled} onOpen={handleOpen} />
+      <Section title="Upcoming" tasks={groups.upcoming} onOpen={handleOpen} />
 
-      <TaskPeek taskId={openTaskId} onClose={() => setOpenTaskId(null)} />
+      <TaskPeek
+        task={openTask}
+        level="DAY"
+        periodKey={weekKey}
+        onClose={() => setOpenTask(null)}
+      />
     </div>
   );
 }
