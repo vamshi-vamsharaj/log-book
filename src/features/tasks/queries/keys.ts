@@ -10,3 +10,10 @@ export const taskKeys = {
 export const linkPreviewKeys = {
   preview: (url: string) => ["link-preview", url] as const,
 };
+
+export const taxonomyKeys = {
+  all: ["taxonomy"] as const,
+  categories: ["taxonomy", "categories"] as const,
+  labels: ["taxonomy", "labels"] as const,
+  tags: ["taxonomy", "tags"] as const,
+};
