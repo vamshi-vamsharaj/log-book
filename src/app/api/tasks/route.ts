@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { handleRouteError } from "@/lib/errors";
 import { requireApiUser } from "@/lib/session";
-import { createTaskSchema, listTasksQuerySchema } from "@/features/tasks/schemas/task.schema";
+import { createTaskSchema, listTasksQuerySchema } from "@/features/tasks/validations/task.validation";
 import * as taskService from "@/features/tasks/services/task.service";
 
 export async function GET(request: NextRequest) {
@@ -11,8 +12,12 @@ export async function GET(request: NextRequest) {
     const query = listTasksQuerySchema.parse(
       Object.fromEntries(request.nextUrl.searchParams.entries()),
     );
-    const tasks = await taskService.listTasks(user.id, query);
-
+    const tasks = await taskService.listPeriodTasks(
+      user.id,
+      query.level,
+      query.periodKey,
+      query.includeCompleted,
+    );
     return NextResponse.json(tasks);
   } catch (error) {
     return handleRouteError(error);
@@ -24,7 +29,6 @@ export async function POST(request: NextRequest) {
     const user = await requireApiUser();
     const body = createTaskSchema.parse(await request.json());
     const task = await taskService.createTask(user.id, body);
-
     return NextResponse.json(task, { status: 201 });
   } catch (error) {
     return handleRouteError(error);
