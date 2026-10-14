@@ -22,3 +22,21 @@ export function useTask(id: string | null) {
     enabled: Boolean(id),
   });
 }
+
+async function fetchSubtasks(taskId: string) {
+  const response = await fetch(`/api/tasks/${taskId}/subtasks`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load subtasks");
+  }
+
+  return response.json() as Promise<{ id: string; title: string; completed: boolean; order: number }[]>;
+}
+
+export function useSubtasks(taskId: string) {
+  return useQuery({
+    queryKey: [...taskKeys.detail(taskId), "subtasks"],
+    queryFn: () => fetchSubtasks(taskId),
+    enabled: Boolean(taskId),
+  });
+}
