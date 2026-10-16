@@ -1,191 +1,290 @@
-import type { Prisma } from "@prisma/client";
 
 import { AppError } from "@/lib/errors";
-import { getDayKey, getPeriodKey, getWeekKey } from "@/lib/period";
-import * as taskRepository from "@/features/tasks/repositories/task.repository";
+import { currentPeriodKey, getPeriodRange, higherLevels, isValidPeriodKey, localDateKey, overlappingPeriodKeys, periodKeyFor } from "@/lib/period";
+import { sanitizeDescription } from "@/lib/description";
+import * as repo from "@/features/tasks/repositories/task.repository";
 import type {
+  BreakDownTaskInput,
   CreateTaskInput,
-  DeriveTaskInput,
-  ListTasksQuery,
+  ImportTaskInput,
+  MoveTaskInput,
   UpdateTaskInput,
-} from "@/features/tasks/schemas/task.schema";
-import type { TaskDTO } from "@/features/tasks/types";
+} from "@/features/tasks/validations/task.validation";
+import type { DeriveTaskInput } from "@/features/tasks/schemas/task.schema";
+import type { PlanningLevel } from "@/lib/period";
 
-function toDTO(task: {
-  id: string;
-  userId: string;
-  parentId: string | null;
-  level: string;
-  periodKey: string | null;
-  title: string;
-  description: string | null;
-  estimatedMinutes: number | null;
-  scheduledDate: Date | null;
-  scheduledTime: string | null;
-  remindAt: Date | null;
-  completed: boolean;
-  completedAt: Date | null;
-  deletedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): TaskDTO {
-  return {
-    id: task.id,
-    userId: task.userId,
-    parentId: task.parentId,
-    level: task.level as TaskDTO["level"],
-    periodKey: task.periodKey,
-    title: task.title,
-    description: task.description,
-    estimatedMinutes: task.estimatedMinutes,
-    scheduledDate: task.scheduledDate ? task.scheduledDate.toISOString() : null,
-    scheduledTime: task.scheduledTime,
-    remindAt: task.remindAt ? task.remindAt.toISOString() : null,
-    completed: task.completed,
-    completedAt: task.completedAt ? task.completedAt.toISOString() : null,
-    deletedAt: task.deletedAt ? task.deletedAt.toISOString() : null,
-    createdAt: task.createdAt.toISOString(),
-    updatedAt: task.updatedAt.toISOString(),
-  };
+/** Bring an existing task into `level`/`periodKey` as a linked (not duplicated)
+ * task: creates a NEW row for the target period that points back at the
+ * original via `sourceTaskId`/`sourceLinkType: "IMPORTED"`. Refuses to
+ * create a second import of the same source into the same period. */
+export async function importTask(userId: string, input: ImportTaskInput) {
+  const source = await repo.findOwnedTask(userId, input.sourceTaskId);
+  if (!source || source.deletedAt) {
+    throw AppError.notFound("Task to import was not found");
+  }
+
+  const existingImports = await repo.listDerivedFrom(source.id, userId);
+  const duplicate = existingImports.find(
+    (task) =>
+      task.level === input.level && task.periodKey === input.periodKey && task.sourceLinkType === "IMPORTED",
+  );
+  if (duplicate) {
+    throw AppError.conflict("This item has already been imported into that period");
+  }
+
+  const order = await repo.nextOrder(userId, input.level, input.periodKey);
+
+  return repo.createTask({
+    userId,
+    level: input.level,
+    periodKey: input.periodKey,
+    title: input.title ?? source.title,
+    order,
+    sourceTaskId: source.id,
+    sourceLinkType: "IMPORTED",
+  });
 }
 
-async function getOwnedTask(userId: string, id: string) {
-  const task = await taskRepository.findTaskById(userId, id);
-
-  if (!task) {
+/** Move an existing task to a different level/period IN PLACE — same row,
+ * same id, same history; no duplication, no source link (this is not an
+ * import, it's a relocation of the one task). */
+export async function moveTask(userId: string, taskId: string, input: MoveTaskInput) {
+  const existing = await repo.findOwnedTask(userId, taskId);
+  if (!existing || existing.deletedAt) {
     throw AppError.notFound("Task not found");
   }
 
-  return task;
-}
+  const order = await repo.nextOrder(userId, input.level, input.periodKey);
 
-export async function listTasks(userId: string, query: ListTasksQuery): Promise<TaskDTO[]> {
-  const where: Prisma.TaskWhereInput = { deletedAt: null };
-
-  if (query.level) {
-    where.level = query.level;
-  }
-
-  if (query.periodKey) {
-    where.periodKey = query.periodKey;
-  }
-
-  if (query.scheduledOnly) {
-    where.scheduledDate = { not: null };
-  }
-
-  if (query.unscheduledOnly) {
-    where.scheduledDate = null;
-  }
-
-  const tasks = await taskRepository.findManyTasks(userId, where);
-  return tasks.map(toDTO);
-}
-
-export async function getTask(userId: string, id: string): Promise<TaskDTO> {
-  const task = await getOwnedTask(userId, id);
-  return toDTO(task);
-}
-
-export async function createTask(userId: string, input: CreateTaskInput): Promise<TaskDTO> {
-  let periodKey = input.periodKey ?? null;
-
-  if (input.level === "DAY" && input.scheduledDate) {
-    periodKey = getDayKey(input.scheduledDate);
-  }
-
-  const task = await taskRepository.createTask(userId, {
-    title: input.title,
-    description: input.description ?? null,
+  return repo.updateTask(taskId, {
     level: input.level,
-    periodKey,
+    periodKey: input.periodKey,
+    order,
+    ...(input.level !== "DAY" ? { scheduledDate: null, scheduledTime: null } : {}),
+  });
+}
+
+/** Break a higher-level objective into several smaller linked tasks at
+ * (usually lower) levels, each pointing back at the source via
+ * `sourceLinkType: "BROKEN_DOWN"`. The source task itself is left untouched
+ * so it still represents the overall objective. */
+export async function breakDownTask(userId: string, taskId: string, input: BreakDownTaskInput) {
+  const source = await repo.findOwnedTask(userId, taskId);
+  if (!source || source.deletedAt) {
+    throw AppError.notFound("Task not found");
+  }
+
+  return repo.runInTransaction(async (tx) => {
+    const created = [];
+    const orderCursor = new Map<string, number>();
+
+    for (const item of input.items) {
+      const cacheKey = `${item.level}:${item.periodKey}`;
+      const order = orderCursor.has(cacheKey)
+        ? orderCursor.get(cacheKey)!
+        : await repo.nextOrder(userId, item.level, item.periodKey, tx);
+      orderCursor.set(cacheKey, order + 1);
+
+      const task = await repo.createTask(
+        {
+          userId,
+          level: item.level,
+          periodKey: item.periodKey,
+          title: item.title,
+          scheduledDate: item.scheduledDate ?? null,
+          order,
+          sourceTaskId: source.id,
+          sourceLinkType: "BROKEN_DOWN",
+        },
+        tx,
+      );
+      created.push(task);
+    }
+
+    return created;
+  });
+}
+
+/** Surfaces unfinished tasks from every HIGHER planning level whose period
+ * overlaps `level`/`periodKey` — e.g. opening the Day planner surfaces
+ * unfinished Week/Month/Quarter/Six-Month/Year items covering that day.
+ * Purely advisory: nothing here writes anything or auto-populates the
+ * planner; the caller decides whether to Import or Break Down. */
+export async function getRecommendations(userId: string, level: PlanningLevel, periodKey: string) {
+  const levelsAbove = higherLevels(level);
+  if (levelsAbove.length === 0) return [];
+
+  const ownRange = getPeriodRange(level, periodKey);
+  if (!ownRange) return [];
+
+  const results: Array<{ level: PlanningLevel; tasks: repo.TaskRow[] }> = [];
+
+  for (const higherLevel of levelsAbove) {
+    const keys = overlappingPeriodKeys(higherLevel, ownRange.start, ownRange.end);
+    if (keys.length === 0) continue;
+    const tasks = await repo.listUnfinishedInPeriod(userId, higherLevel, keys);
+    if (tasks.length > 0) {
+      results.push({ level: higherLevel, tasks });
+    }
+  }
+
+  return results;
+}
+
+export async function createTask(userId: string, input: CreateTaskInput) {
+  const order = await repo.nextOrder(userId, input.level, input.periodKey);
+
+  return repo.createTask({
+    userId,
+    level: input.level,
+    periodKey: input.periodKey,
+    title: input.title,
+    order,
     scheduledDate: input.scheduledDate ?? null,
     scheduledTime: input.scheduledTime ?? null,
     estimatedMinutes: input.estimatedMinutes ?? null,
-    remindAt: input.remindAt ?? null,
-    parentId: input.parentId ?? null,
+    description: repo.toDescriptionJson(sanitizeDescription(input.description)),
   });
-
-  return toDTO(task);
 }
 
-export async function updateTask(
+export async function listPeriodTasks(
   userId: string,
-  id: string,
-  input: UpdateTaskInput,
-): Promise<TaskDTO> {
-  const existing = await getOwnedTask(userId, id);
+  level: PlanningLevel,
+  periodKey: string,
+  includeCompleted: boolean,
+) {
+  if (!isValidPeriodKey(level, periodKey)) {
+    throw new AppError("Invalid period", 400, "VALIDATION_ERROR");
+  }
+  return repo.listPeriodTasks(userId, level, periodKey, includeCompleted);
+}
 
-  const data: Prisma.TaskUpdateInput = { ...input };
+async function assertOwnedActive(userId: string, taskId: string) {
+  const task = await repo.findOwnedTask(userId, taskId);
+  if (!task || task.deletedAt) {
+    throw AppError.notFound("Task not found");
+  }
+  return task;
+}
 
-  const nextLevel = input.level ?? existing.level;
-  const nextScheduledDate =
-    input.scheduledDate !== undefined ? input.scheduledDate : existing.scheduledDate;
+export async function updateTask(userId: string, taskId: string, input: UpdateTaskInput) {
+  await assertOwnedActive(userId, taskId);
 
-  if (nextLevel === "DAY") {
-    data.periodKey = nextScheduledDate ? getDayKey(nextScheduledDate) : null;
-  } else if (input.level && input.level !== existing.level && !input.periodKey) {
-    data.periodKey = getPeriodKey(input.level, new Date());
+  const data: Record<string, unknown> = { ...input };
+
+  if (input.completed !== undefined) {
+    data.completedAt = input.completed ? new Date() : null;
+  }
+  if (input.description !== undefined) {
+    data.description = repo.toDescriptionJson(sanitizeDescription(input.description));
+  }
+  if (input.remindAt !== undefined) {
+    data.remindAt = input.remindAt ? new Date(input.remindAt) : null;
   }
 
-  const updated = await taskRepository.updateTask(id, data);
-  return toDTO(updated);
+  return repo.updateTask(taskId, data);
 }
 
-export async function deleteTask(userId: string, id: string): Promise<void> {
-  await getOwnedTask(userId, id);
-  await taskRepository.softDeleteTask(id);
+export async function deleteTask(userId: string, taskId: string) {
+  await assertOwnedActive(userId, taskId);
+  return repo.softDeleteTask(taskId);
 }
 
-export async function restoreTask(userId: string, id: string): Promise<TaskDTO> {
-  const task = await taskRepository.findTaskById(userId, id);
-
+export async function restoreTask(userId: string, taskId: string) {
+  const task = await repo.findOwnedTask(userId, taskId);
   if (!task) {
     throw AppError.notFound("Task not found");
   }
-
-  const restored = await taskRepository.restoreTask(id);
-  return toDTO(restored);
+  return repo.restoreTask(taskId);
 }
 
-export async function completeTask(userId: string, id: string): Promise<TaskDTO> {
-  await getOwnedTask(userId, id);
-  const updated = await taskRepository.setCompleted(id, true);
-  return toDTO(updated);
+export async function createSubtask(userId: string, taskId: string, title: string) {
+  await assertOwnedActive(userId, taskId);
+  const order = await repo.nextSubtaskOrder(taskId);
+  return repo.createSubtask(taskId, title, order);
 }
 
-export async function reopenTask(userId: string, id: string): Promise<TaskDTO> {
-  await getOwnedTask(userId, id);
-  const updated = await taskRepository.setCompleted(id, false);
-  return toDTO(updated);
-}
-
-export async function deriveTask(
+export async function updateSubtask(
   userId: string,
-  parentId: string,
-  input: DeriveTaskInput,
-): Promise<TaskDTO> {
-  const parent = await getOwnedTask(userId, parentId);
-
-  const periodKey =
-    input.level === "DAY" && input.scheduledDate
-      ? getDayKey(input.scheduledDate)
-      : getPeriodKey(input.level, input.scheduledDate ?? new Date());
-
-  const child = await taskRepository.createTask(userId, {
-    title: input.title ?? parent.title,
-    level: input.level,
-    periodKey,
-    scheduledDate: input.scheduledDate ?? null,
-    parentId: parent.id,
-  });
-
-  return toDTO(child);
+  subtaskId: string,
+  data: { title?: string; completed?: boolean; order?: number },
+) {
+  const subtask = await repo.findOwnedSubtask(userId, subtaskId);
+  if (!subtask) {
+    throw AppError.notFound("Subtask not found");
+  }
+  return repo.updateSubtask(subtaskId, data);
 }
 
-export async function getWeekSuggestions(userId: string, date: Date): Promise<TaskDTO[]> {
-  const weekKey = getWeekKey(date);
-  const dayKey = getDayKey(date);
-  const tasks = await taskRepository.findWeekSuggestions(userId, weekKey, dayKey);
-  return tasks.map(toDTO);
+export async function deleteSubtask(userId: string, subtaskId: string) {
+  const subtask = await repo.findOwnedSubtask(userId, subtaskId);
+  if (!subtask) {
+    throw AppError.notFound("Subtask not found");
+  }
+  return repo.deleteSubtask(subtaskId);
+}
+
+export function todayPeriodKey(level: PlanningLevel): string {
+  return currentPeriodKey(level, localDateKey());
+}
+
+export async function completeTask(userId: string, taskId: string) {
+  const task = await assertOwnedActive(userId, taskId);
+  return repo.updateTask(task.id, { completed: true, completedAt: new Date() });
+}
+
+export async function reopenTask(userId: string, taskId: string) {
+  const task = await assertOwnedActive(userId, taskId);
+  return repo.updateTask(task.id, { completed: false, completedAt: null });
+}
+
+export async function cancelTask(userId: string, taskId: string) {
+  const task = await assertOwnedActive(userId, taskId);
+  return repo.updateTask(task.id, { completed: false, deletedAt: new Date() });
+}
+
+export async function archiveTask(userId: string, taskId: string) {
+  const task = await assertOwnedActive(userId, taskId);
+  return repo.softDeleteTask(task.id);
+}
+
+export async function deriveTask(userId: string, taskId: string, input: DeriveTaskInput) {
+  const source = await assertOwnedActive(userId, taskId);
+  const today = localDateKey();
+  const level = input.level ?? "DAY";
+  const periodKey = periodKeyFor(level, today);
+  const order = await repo.nextOrder(userId, level, periodKey);
+
+  return repo.createTask({
+    userId,
+    level,
+    periodKey,
+    title: input.title ?? source.title,
+    order,
+    scheduledDate: input.scheduledDate ? input.scheduledDate.toISOString().slice(0, 10) : null,
+    sourceTaskId: source.id,
+    sourceLinkType: "BROKEN_DOWN",
+  });
+}
+
+export async function getWeekSuggestions(userId: string, date: Date) {
+  const dateKey = localDateKey(date);
+  const weekKey = periodKeyFor("WEEK", dateKey);
+  const range = getPeriodRange("WEEK", weekKey);
+
+  if (!range) return [];
+
+  const levelsAbove = higherLevels("DAY");
+  const results: Array<{ level: PlanningLevel; tasks: repo.TaskRow[] }> = [];
+
+  for (const level of levelsAbove) {
+    const keys = overlappingPeriodKeys(level, range.start, range.end);
+    if (keys.length === 0) continue;
+    const tasks = await repo.listUnfinishedInPeriod(userId, level, keys);
+    if (tasks.length > 0) {
+      results.push({ level, tasks });
+    }
+  }
+
+  return results;
 }
