@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { auth } from "@/lib/auth";
+import { AppError } from "@/lib/errors";
 
 export const getSession = cache(async () => {
   return auth.api.getSession({
@@ -23,4 +24,15 @@ export async function requireAuth() {
   }
 
   return session;
+}
+
+/** For use in API route handlers – throws a 401 instead of redirecting. */
+export async function requireApiUser() {
+  const session = await getSession();
+
+  if (!session?.user) {
+    throw AppError.unauthorized("Not authenticated");
+  }
+
+  return session.user;
 }
