@@ -2,7 +2,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_ROUTES = ["/dashboard"];
+const PROTECTED_ROUTES = ["/dashboard", "/planner"];
 const AUTH_ROUTES = ["/sign-in", "/sign-up"];
 
 export function middleware(request: NextRequest) {
@@ -18,13 +18,25 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
+  // 2. Only redirect away from auth routes if a cookie is present AND it's not a prefetch
   if (isAuthRoute && sessionCookie) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const isPrefetch = 
+      request.headers.get("x-middleware-prefetch") ||
+      request.headers.get("purpose") === "prefetch";
+
+    if (!isPrefetch) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/sign-in", "/sign-up"],
+  matcher: [
+    "/dashboard/:path*",
+    "/planner/:path*",
+    "/sign-in",
+    "/sign-up"
+  ],
 };
