@@ -38,6 +38,7 @@ export const TASK_SELECT = {
   remindAt: true,
   sourceTaskId: true,
   sourceLinkType: true,
+  skippedAt: true,
   deletedAt: true,
   createdAt: true,
   updatedAt: true,
