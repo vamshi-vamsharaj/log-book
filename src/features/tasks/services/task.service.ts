@@ -248,6 +248,20 @@ export async function archiveTask(userId: string, taskId: string) {
   return repo.softDeleteTask(task.id);
 }
 
+/** Mark a task as intentionally skipped for its scheduled occurrence.
+ * Unlike completing, this does NOT mark it done and does NOT affect
+ * completion statistics. */
+export async function skipTask(userId: string, taskId: string) {
+  const task = await assertOwnedActive(userId, taskId);
+  return repo.updateTask(task.id, { skippedAt: new Date() });
+}
+
+/** Remove a previous skip, making the task outstanding again. */
+export async function unskipTask(userId: string, taskId: string) {
+  const task = await assertOwnedActive(userId, taskId);
+  return repo.updateTask(task.id, { skippedAt: null });
+}
+
 export async function deriveTask(userId: string, taskId: string, input: DeriveTaskInput) {
   const source = await assertOwnedActive(userId, taskId);
   const today = localDateKey();
