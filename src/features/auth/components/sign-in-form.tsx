@@ -76,15 +76,14 @@ export function SignInForm() {
       password: values.password,
     });
 
-    setIsSubmitting(false);
-
     if (error) {
+      setIsSubmitting(false);
       setServerError(error.message ?? "Unable to sign in with the provided credentials");
       return;
     }
 
-    router.push(redirectTo);
-    router.refresh();
+    // Hard redirect so the session cookie is picked up by server components immediately
+    window.location.href = redirectTo;
   }
 
   async function handleGoogleSignIn() {
