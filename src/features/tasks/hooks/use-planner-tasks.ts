@@ -30,6 +30,7 @@ export interface TaskDTO {
   remindAt: string | null;
   sourceTaskId: string | null;
   sourceLinkType: "IMPORTED" | "BROKEN_DOWN" | null;
+  skippedAt: string | null;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
