@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
 
-import { PageContainer } from "@/components/layout/page-container";
+import { CalendarView } from "@/features/calendar/components/calendar-view";
 
 export const metadata: Metadata = {
   title: "Calendar",
+  description: "View and manage your scheduled tasks across Month, Week, Day, and Agenda views.",
 };
 
 export default function CalendarPage() {
   return (
-    <PageContainer title="Calendar" description="See your schedule at a glance.">
-      <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-        Calendar views will be implemented in a future phase.
-      </div>
-    </PageContainer>
+    <div className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden">
+      <CalendarView />
+    </div>
   );
 }
