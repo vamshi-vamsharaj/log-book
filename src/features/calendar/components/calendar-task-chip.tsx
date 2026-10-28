@@ -1,11 +1,15 @@
 "use client";
 
-import { Check, Clock, SkipForward, X } from "lucide-react";
+import { Check, Clock, RotateCcw, SkipForward } from "lucide-react";
 import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { formatDuration, formatTime } from "@/features/calendar/utils";
-import { useCalendarUpdateTask, useSkipTask } from "@/features/calendar/hooks/use-calendar-tasks";
+import {
+  useCalendarUpdateTask,
+  useSkipTask,
+  useUnskipTask,
+} from "@/features/calendar/hooks/use-calendar-tasks";
 import type { CalendarTaskDTO } from "@/features/calendar/hooks/use-calendar-tasks";
 
 interface CalendarTaskChipProps {
@@ -25,6 +29,7 @@ export function CalendarTaskChip({ task, compact, onClick }: CalendarTaskChipPro
   const [hovered, setHovered] = useState(false);
   const updateTask = useCalendarUpdateTask();
   const skipTask = useSkipTask();
+  const unskipTask = useUnskipTask();
 
   const isSkipped = Boolean(task.skippedAt);
 
@@ -36,6 +41,11 @@ export function CalendarTaskChip({ task, compact, onClick }: CalendarTaskChipPro
   function handleSkip(e: React.MouseEvent) {
     e.stopPropagation();
     skipTask.mutate(task.id);
+  }
+
+  function handleUnskip(e: React.MouseEvent) {
+    e.stopPropagation();
+    unskipTask.mutate(task.id);
   }
 
   return (
@@ -101,26 +111,46 @@ export function CalendarTaskChip({ task, compact, onClick }: CalendarTaskChipPro
               </span>
             ) : null}
             {isSkipped && !task.completed ? (
-              <span className="rounded bg-muted px-1 py-px text-[10px] font-medium text-muted-foreground">
+              <button
+                type="button"
+                onClick={handleUnskip}
+                title="Click to unskip task"
+                className="inline-flex items-center gap-0.5 rounded bg-amber-100/90 px-1 py-px text-[10px] font-medium text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-300"
+              >
+                <RotateCcw className="h-2.5 w-2.5" />
                 skipped
-              </span>
+              </button>
             ) : null}
           </div>
         )}
       </div>
 
-      {/* Skip button — only shown on hover for non-completed, non-skipped tasks */}
-      {hovered && !task.completed && !isSkipped ? (
-        <button
-          type="button"
-          aria-label="Skip task"
-          onClick={handleSkip}
-          title="Skip this task"
-          className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground/60 hover:text-amber-600"
-        >
-          <SkipForward className="h-3 w-3" />
-        </button>
-      ) : null}
+      {/* Skip / Unskip button on hover */}
+      {hovered && !task.completed && (
+        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+          {!isSkipped ? (
+            <button
+              type="button"
+              aria-label="Skip task"
+              onClick={handleSkip}
+              title="Skip this task"
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-accent hover:text-amber-600"
+            >
+              <SkipForward className="h-3 w-3" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label="Unskip task"
+              onClick={handleUnskip}
+              title="Unskip task (resume)"
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-amber-600 transition-colors hover:bg-amber-100 hover:text-amber-800 dark:hover:bg-amber-950/60 dark:hover:text-amber-300"
+            >
+              <RotateCcw className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
