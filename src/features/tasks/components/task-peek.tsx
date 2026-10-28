@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Check, Clock, Plus, Trash2, X } from "lucide-react";
+import { Calendar, Check, Clock, Plus, RotateCcw, SkipForward, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import {
   useDeleteTask,
   useUpdateSubtask,
   useUpdateTask,
+  useSkipTask,
+  useUnskipTask,
   type TaskDTO,
 } from "@/features/tasks/hooks/use-planner-tasks";
 import type { PlanningLevel } from "@/lib/period";
@@ -57,6 +59,8 @@ export function TaskPeek({ task, level, periodKey, onClose }: TaskPeekProps) {
   const createSubtask = useCreateSubtask(level, periodKey);
   const updateSubtask = useUpdateSubtask(level, periodKey);
   const deleteSubtask = useDeleteSubtask(level, periodKey);
+  const skipTask = useSkipTask();
+  const unskipTask = useUnskipTask();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState<RichTextDoc | null>(null);
@@ -147,6 +151,27 @@ export function TaskPeek({ task, level, periodKey, onClose }: TaskPeekProps) {
         </div>
 
         <div className="space-y-5 px-6 pb-6">
+          {task.skippedAt ? (
+            <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/80 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+              <div className="flex items-center gap-2">
+                <SkipForward className="h-4 w-4 shrink-0 text-amber-600" />
+                <span>
+                  This task was <strong>skipped</strong> for its scheduled date.
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => unskipTask.mutate(task.id)}
+                className="h-7 border-amber-300 bg-background text-xs font-medium text-amber-900 hover:bg-amber-100 hover:text-amber-950 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-900/50"
+              >
+                <RotateCcw className="mr-1 h-3 w-3" />
+                Resume task
+              </Button>
+            </div>
+          ) : null}
+
           <RichTextEditor
             value={description}
             onChange={(doc) => {
@@ -272,34 +297,64 @@ export function TaskPeek({ task, level, periodKey, onClose }: TaskPeekProps) {
           <span className="text-xs text-muted-foreground">
             Created {new Date(task.createdAt).toLocaleDateString()}
           </span>
-          {confirmingDelete ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Delete this task?</span>
-              <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(false)}>
-                Cancel
-              </Button>
+
+          <div className="flex items-center gap-2">
+            {!task.completed && (
+              task.skippedAt ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-amber-300 text-xs font-medium text-amber-900 hover:bg-amber-100 hover:text-amber-950 dark:border-amber-800 dark:text-amber-300"
+                  onClick={() => unskipTask.mutate(task.id)}
+                >
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                  Unskip
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-muted-foreground hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
+                  onClick={() => skipTask.mutate(task.id)}
+                  title="Skip this task for now"
+                >
+                  <SkipForward className="mr-1.5 h-3.5 w-3.5" />
+                  Skip
+                </Button>
+              )
+            )}
+
+            {confirmingDelete ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Delete this task?</span>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    deleteTask.mutate(task.id);
+                    onClose();
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            ) : (
               <Button
-                variant="destructive"
+                variant="ghost"
                 size="sm"
-                onClick={() => {
-                  deleteTask.mutate(task.id);
-                  onClose();
-                }}
+                className="h-8 text-xs text-destructive hover:text-destructive"
+                onClick={() => setConfirmingDelete(true)}
               >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                 Delete
               </Button>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setConfirmingDelete(true)}
-            >
-              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-              Delete
-            </Button>
-          )}
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
