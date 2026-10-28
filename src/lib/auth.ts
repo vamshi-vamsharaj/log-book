@@ -8,7 +8,16 @@ import { env } from "@/lib/env";
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
-  trustedOrigins: [env.NEXT_PUBLIC_APP_URL],
+  trustedOrigins: [
+    env.NEXT_PUBLIC_APP_URL,
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:3003",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+  ],
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
