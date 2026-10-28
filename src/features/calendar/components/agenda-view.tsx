@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarDays } from "lucide-react";
+import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 import { localDateKey, addDays } from "@/lib/period";
@@ -19,17 +20,20 @@ interface AgendaViewProps {
 /** Shows the next 30 days as a scrollable list, grouping tasks under each date. */
 export function AgendaView({ startDate, tasks, onTaskClick, onDateClick }: AgendaViewProps) {
   const today = localDateKey();
-  const days: string[] = [];
-  for (let i = 0; i < 30; i++) {
-    days.push(addDays(startDate, i));
-  }
 
-  const daysWithTasks = days.map((dateKey) => ({
-    dateKey,
-    tasks: getTasksForDay(tasks, dateKey, today),
-  }));
+  const daysWithTasks = useMemo(() => {
+    const list: Array<{ dateKey: string; tasks: CalendarTaskDTO[] }> = [];
+    for (let i = 0; i < 30; i++) {
+      const dateKey = addDays(startDate, i);
+      const dayTasks = getTasksForDay(tasks, dateKey, today);
+      if (dayTasks.length > 0) {
+        list.push({ dateKey, tasks: dayTasks });
+      }
+    }
+    return list;
+  }, [startDate, tasks, today]);
 
-  const hasAnyTasks = daysWithTasks.some((d) => d.tasks.length > 0);
+  const hasAnyTasks = daysWithTasks.length > 0;
 
   return (
     <div className="flex-1 overflow-y-auto px-2 py-3">
