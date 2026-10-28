@@ -113,6 +113,7 @@ model Task {
   sourceTaskId   String?
   sourceLinkType TaskLinkType?
 
+  skippedAt DateTime?
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
