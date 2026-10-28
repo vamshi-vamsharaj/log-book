@@ -56,7 +56,9 @@ export function TaskRow({ task, onToggleComplete, onTitleCommit, onOpen }: TaskR
     task.subtasks.length > 0
       ? `${task.subtasks.filter((s) => s.completed).length}/${task.subtasks.length}`
       : null;
-  const hasMeta = Boolean(estimate || subtaskProgress || task.scheduledDate || task.sourceLinkType);
+  const hasMeta = Boolean(
+    estimate || subtaskProgress || task.scheduledDate || task.sourceLinkType || task.skippedAt,
+  );
 
   return (
     <div
@@ -153,6 +155,11 @@ export function TaskRow({ task, onToggleComplete, onTitleCommit, onOpen }: TaskR
             ) : null}
             {task.sourceLinkType === "BROKEN_DOWN" ? (
               <span className="rounded-full bg-muted px-1.5 py-[1px] text-[11px] italic">from breakdown</span>
+            ) : null}
+            {task.skippedAt ? (
+              <span className="rounded-full bg-amber-100 px-1.5 py-[1px] text-[11px] font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+                skipped
+              </span>
             ) : null}
           </div>
         ) : null}
