@@ -191,3 +191,25 @@ export function useDeleteSubtask(level: PlanningLevel, periodKey: string) {
     onSuccess: () => invalidate(level, periodKey),
   });
 }
+
+export function useSkipTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<TaskDTO>(`/api/tasks/${id}/skip`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+    },
+  });
+}
+
+export function useUnskipTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<TaskDTO>(`/api/tasks/${id}/unskip`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+    },
+  });
+}
