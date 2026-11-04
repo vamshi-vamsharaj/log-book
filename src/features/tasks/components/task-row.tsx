@@ -4,6 +4,7 @@ import { Check, Clock, GripVertical } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { localDateKey } from "@/lib/period";
 import type { TaskDTO } from "@/features/tasks/hooks/use-planner-tasks";
 
 interface TaskRowProps {
@@ -51,13 +52,25 @@ export function TaskRow({ task, onToggleComplete, onTitleCommit, onOpen }: TaskR
     }
   }
 
+  const today = localDateKey();
+  const isCarriedForward =
+    task.level === "DAY" &&
+    (task.periodKey < today || (Boolean(task.scheduledDate) && task.scheduledDate! < today)) &&
+    !task.completed &&
+    !task.skippedAt;
+
   const estimate = formatMinutes(task.estimatedMinutes);
   const subtaskProgress =
     task.subtasks.length > 0
       ? `${task.subtasks.filter((s) => s.completed).length}/${task.subtasks.length}`
       : null;
   const hasMeta = Boolean(
-    estimate || subtaskProgress || task.scheduledDate || task.sourceLinkType || task.skippedAt,
+    estimate ||
+      subtaskProgress ||
+      task.scheduledDate ||
+      task.sourceLinkType ||
+      task.skippedAt ||
+      isCarriedForward,
   );
 
   return (
@@ -159,6 +172,11 @@ export function TaskRow({ task, onToggleComplete, onTitleCommit, onOpen }: TaskR
             {task.skippedAt ? (
               <span className="rounded-full bg-amber-100 px-1.5 py-[1px] text-[11px] font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
                 skipped
+              </span>
+            ) : null}
+            {isCarriedForward ? (
+              <span className="rounded-full bg-amber-100 px-1.5 py-[1px] text-[11px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                carried over
               </span>
             ) : null}
           </div>
