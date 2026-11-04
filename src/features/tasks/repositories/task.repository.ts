@@ -5,7 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import type { RichTextDoc } from "@/lib/description";
-import type { PlanningLevel } from "@/lib/period";
+import { localDateKey, type PlanningLevel } from "@/lib/period";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
@@ -67,13 +67,29 @@ export function listPeriodTasks(
   includeCompleted: boolean,
   tx: Tx = db,
 ) {
+  const today = localDateKey();
+  const isViewingTodayDayPlanner = level === "DAY" && periodKey === today;
+
   return tx.task.findMany({
     where: {
       userId,
       level,
-      periodKey,
       deletedAt: null,
-      ...(includeCompleted ? {} : { completed: false }),
+      ...(isViewingTodayDayPlanner
+        ? {
+            OR: [
+              { periodKey, ...(includeCompleted ? {} : { completed: false }) },
+              {
+                periodKey: { lt: today },
+                completed: false,
+                skippedAt: null,
+              },
+            ],
+          }
+        : {
+            periodKey,
+            ...(includeCompleted ? {} : { completed: false }),
+          }),
     },
     select: TASK_SELECT,
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
