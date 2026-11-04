@@ -66,8 +66,11 @@ export function useRecommendations(level: PlanningLevel, periodKey: string) {
 
 function useInvalidatePeriod() {
   const queryClient = useQueryClient();
-  return (level: PlanningLevel, periodKey: string) =>
+  return (level: PlanningLevel, periodKey: string) => {
     queryClient.invalidateQueries({ queryKey: keys.period(level, periodKey) });
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["calendar"] });
+  };
 }
 
 export function useCreateTask(level: PlanningLevel, periodKey: string) {
