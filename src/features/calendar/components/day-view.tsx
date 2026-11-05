@@ -27,7 +27,15 @@ export function DayView({ dateKey, tasks, onTaskClick, onAddTask }: DayViewProps
     (a.scheduledTime ?? "").localeCompare(b.scheduledTime ?? ""),
   );
   const unscheduled = dayTasks.filter((t) => !t.scheduledTime);
-  const carryForward = dayTasks.filter((t) => t.isCarriedForward);
+
+  const isPast = dateKey < today;
+  const uncompletedPast = isPast
+    ? dayTasks.filter((t) => !t.completed && !t.skippedAt)
+    : [];
+  const carryForward = isToday
+    ? dayTasks.filter((t) => t.isCarriedForward)
+    : [];
+  const completedCount = dayTasks.filter((t) => t.completed).length;
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -66,14 +74,19 @@ export function DayView({ dateKey, tasks, onTaskClick, onAddTask }: DayViewProps
           <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
             {dayTasks.length} task{dayTasks.length !== 1 ? "s" : ""}
           </span>
+          {uncompletedPast.length > 0 ? (
+            <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
+              {uncompletedPast.length} not completed
+            </span>
+          ) : null}
           {carryForward.length > 0 ? (
             <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
               {carryForward.length} carried over
             </span>
           ) : null}
-          {dayTasks.filter(t => t.completed).length > 0 ? (
+          {completedCount > 0 ? (
             <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs text-green-700 dark:bg-green-900/40 dark:text-green-400">
-              {dayTasks.filter(t => t.completed).length} completed
+              {completedCount} completed
             </span>
           ) : null}
         </div>
@@ -93,7 +106,7 @@ export function DayView({ dateKey, tasks, onTaskClick, onAddTask }: DayViewProps
                     {task.scheduledTime ? formatTime(task.scheduledTime) : null}
                   </div>
                   <div className="flex-1">
-                    <CalendarTaskChip task={task} onClick={onTaskClick} />
+                    <CalendarTaskChip task={task} cellDate={dateKey} onClick={onTaskClick} />
                   </div>
                 </div>
               ))}
@@ -109,7 +122,7 @@ export function DayView({ dateKey, tasks, onTaskClick, onAddTask }: DayViewProps
             </h3>
             <div className="space-y-1.5">
               {unscheduled.map((task) => (
-                <CalendarTaskChip key={task.id} task={task} onClick={onTaskClick} />
+                <CalendarTaskChip key={task.id} task={task} cellDate={dateKey} onClick={onTaskClick} />
               ))}
             </div>
           </section>
