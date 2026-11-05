@@ -98,6 +98,7 @@ export function MonthView({ year, month, tasks, onTaskClick, onDateClick }: Mont
                   <CalendarTaskChip
                     key={task.id}
                     task={task}
+                    cellDate={dateKey}
                     compact
                     onClick={onTaskClick}
                   />
