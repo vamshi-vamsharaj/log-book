@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Check, Clock, Plus, RotateCcw, SkipForward, Trash2, X } from "lucide-react";
+import { AlertCircle, Calendar, Check, Clock, Plus, RotateCcw, SkipForward, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   useUnskipTask,
   type TaskDTO,
 } from "@/features/tasks/hooks/use-planner-tasks";
-import type { PlanningLevel } from "@/lib/period";
+import { localDateKey, type PlanningLevel } from "@/lib/period";
 import { cn } from "@/lib/utils";
 
 interface TaskPeekProps {
@@ -169,6 +169,13 @@ export function TaskPeek({ task, level, periodKey, onClose }: TaskPeekProps) {
                 <RotateCcw className="mr-1 h-3 w-3" />
                 Resume task
               </Button>
+            </div>
+          ) : task.scheduledDate && task.scheduledDate < localDateKey() && !task.completed ? (
+            <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50/80 px-3.5 py-2.5 text-xs text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
+              <span>
+                Originally scheduled for <strong>{task.scheduledDate}</strong> was not completed and is carried forward.
+              </span>
             </div>
           ) : null}
 
