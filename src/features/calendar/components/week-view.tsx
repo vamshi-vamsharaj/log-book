@@ -101,6 +101,7 @@ export function WeekView({ weekStartDate, tasks, onTaskClick, onDateClick }: Wee
                   <CalendarTaskChip
                     key={task.id}
                     task={task}
+                    cellDate={dateKey}
                     onClick={onTaskClick}
                   />
                 ))}
