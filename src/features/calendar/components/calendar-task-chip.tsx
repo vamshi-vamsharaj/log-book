@@ -1,10 +1,10 @@
 "use client";
 
-import { Check, Clock, RotateCcw, SkipForward } from "lucide-react";
+import { AlertCircle, Check, Clock, RotateCcw, SkipForward } from "lucide-react";
 import { useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { formatDuration, formatTime } from "@/features/calendar/utils";
+import { formatDuration, formatTime, todayKey } from "@/features/calendar/utils";
 import {
   useCalendarUpdateTask,
   useSkipTask,
@@ -14,24 +14,44 @@ import type { CalendarTaskDTO } from "@/features/calendar/hooks/use-calendar-tas
 
 interface CalendarTaskChipProps {
   task: CalendarTaskDTO;
-  /** Show time prefix if task has a scheduledTime */
+  /** The date key ("YYYY-MM-DD") of the calendar cell or column where this chip is rendered */
+  cellDate?: string;
+  /** Show compact title-only layout (used in Month view grid) */
   compact?: boolean;
   onClick: (task: CalendarTaskDTO) => void;
 }
 
 /**
- * A small task pill rendered inside a calendar cell.
+ * A task pill rendered inside a calendar cell.
  * - Completed tasks get a strikethrough + muted colour.
- * - Skipped tasks get an amber/yellow "skipped" badge.
- * - Carried-forward tasks get an orange left border and overdue badge.
+ * - Original past date uncompleted tasks get a rose left border + "Not completed" badge.
+ * - Carried-forward tasks on today get an amber left border + "Carried over" badge.
+ * - Skipped tasks get an amber/yellow "skipped" badge with unskip option.
  */
-export function CalendarTaskChip({ task, compact, onClick }: CalendarTaskChipProps) {
+export function CalendarTaskChip({ task, cellDate, compact, onClick }: CalendarTaskChipProps) {
   const [hovered, setHovered] = useState(false);
   const updateTask = useCalendarUpdateTask();
   const skipTask = useSkipTask();
   const unskipTask = useUnskipTask();
 
+  const today = todayKey();
   const isSkipped = Boolean(task.skippedAt);
+
+  // Is this chip rendered on a past date where it was originally scheduled and left uncompleted?
+  const isPastCell = Boolean(cellDate) && cellDate! < today;
+  const isOriginalPastUncompleted =
+    isPastCell &&
+    task.scheduledDate === cellDate &&
+    !task.completed &&
+    !isSkipped;
+
+  // Is this chip rendered on today as a carried-over task from an earlier date?
+  const isCarriedForwardToToday =
+    (cellDate ? cellDate === today : task.isCarriedForward) &&
+    Boolean(task.scheduledDate) &&
+    task.scheduledDate! < today &&
+    !task.completed &&
+    !isSkipped;
 
   function handleToggleComplete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -56,16 +76,25 @@ export function CalendarTaskChip({ task, compact, onClick }: CalendarTaskChipPro
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick(task)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      title={
+        isOriginalPastUncompleted
+          ? `Scheduled for ${task.scheduledDate} but was not completed • Carried forward`
+          : isCarriedForwardToToday
+            ? `Carried forward from ${task.originalDate}`
+            : task.title
+      }
       className={cn(
         "group/chip relative flex min-w-0 cursor-pointer select-none items-center gap-1.5 rounded-md px-1.5 py-1 text-xs transition-all duration-150",
         "border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         task.completed
           ? "border-border/40 bg-muted/50 text-muted-foreground/60"
-          : task.isCarriedForward
-            ? "border-l-2 border-l-amber-500 border-t-border/40 border-r-border/40 border-b-border/40 bg-amber-50/50 text-foreground dark:bg-amber-950/20"
-            : isSkipped
-              ? "border-border/40 bg-muted/30 text-muted-foreground/70"
-              : "border-border/40 bg-card text-foreground hover:bg-accent/60 hover:border-border",
+          : isOriginalPastUncompleted
+            ? "border-l-2 border-l-rose-500 border-t-border/40 border-r-border/40 border-b-border/40 bg-rose-50/50 text-foreground dark:bg-rose-950/25"
+            : isCarriedForwardToToday
+              ? "border-l-2 border-l-amber-500 border-t-border/40 border-r-border/40 border-b-border/40 bg-amber-50/50 text-foreground dark:bg-amber-950/20"
+              : isSkipped
+                ? "border-border/40 bg-muted/30 text-muted-foreground/70"
+                : "border-border/40 bg-card text-foreground hover:bg-accent/60 hover:border-border",
       )}
     >
       {/* Complete button */}
@@ -77,7 +106,9 @@ export function CalendarTaskChip({ task, compact, onClick }: CalendarTaskChipPro
           "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border transition-all",
           task.completed
             ? "border-primary bg-primary text-primary-foreground"
-            : "border-muted-foreground/40 hover:border-primary/70",
+            : isOriginalPastUncompleted
+              ? "border-rose-400 bg-rose-100/60 hover:border-rose-600 dark:border-rose-700 dark:bg-rose-950/40"
+              : "border-muted-foreground/40 hover:border-primary/70",
         )}
       >
         {task.completed && <Check className="h-2 w-2" strokeWidth={3} />}
@@ -85,31 +116,69 @@ export function CalendarTaskChip({ task, compact, onClick }: CalendarTaskChipPro
 
       {/* Task info */}
       <div className="min-w-0 flex-1">
-        <span
-          className={cn(
-            "block truncate leading-tight",
-            task.completed && "line-through",
-            isSkipped && !task.completed && "opacity-60",
-          )}
-        >
-          {!compact && task.scheduledTime ? (
-            <span className="mr-1 font-medium opacity-70">{formatTime(task.scheduledTime)}</span>
+        <div className="flex items-center gap-1 overflow-hidden">
+          <span
+            className={cn(
+              "truncate leading-tight",
+              task.completed && "line-through",
+              isSkipped && !task.completed && "opacity-60",
+            )}
+          >
+            {!compact && task.scheduledTime ? (
+              <span className="mr-1 font-medium opacity-70">{formatTime(task.scheduledTime)}</span>
+            ) : null}
+            {task.title}
+          </span>
+
+          {/* Compact tags for Month view */}
+          {compact && isOriginalPastUncompleted ? (
+            <span
+              title="Not completed on this day"
+              className="inline-flex shrink-0 items-center rounded bg-rose-100 px-1 py-px text-[9px] font-semibold text-rose-700 dark:bg-rose-950/70 dark:text-rose-300"
+            >
+              Not done
+            </span>
           ) : null}
-          {task.title}
-        </span>
+
+          {compact && isCarriedForwardToToday ? (
+            <span
+              title="Carried over from earlier day"
+              className="inline-flex shrink-0 items-center rounded bg-amber-100 px-1 py-px text-[9px] font-semibold text-amber-700 dark:bg-amber-950/70 dark:text-amber-300"
+            >
+              Carried
+            </span>
+          ) : null}
+        </div>
+
+        {/* Detailed tags for Week / Day / Agenda view */}
         {!compact && (
-          <div className="flex items-center gap-1.5 opacity-60">
+          <div className="flex flex-wrap items-center gap-1.5 opacity-80">
             {task.estimatedMinutes ? (
-              <span className="inline-flex items-center gap-0.5">
+              <span className="inline-flex items-center gap-0.5 text-muted-foreground">
                 <Clock className="h-2.5 w-2.5" />
                 {formatDuration(task.estimatedMinutes)}
               </span>
             ) : null}
-            {task.isCarriedForward && !task.completed ? (
-              <span className="rounded bg-amber-100 px-1 py-px text-[10px] font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-400">
+
+            {isOriginalPastUncompleted ? (
+              <span
+                title="This task was scheduled for this day but was not completed"
+                className="inline-flex items-center gap-1 rounded bg-rose-100 px-1.5 py-px text-[10px] font-medium text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
+              >
+                <AlertCircle className="h-2.5 w-2.5 text-rose-600 dark:text-rose-400" />
+                Not completed
+              </span>
+            ) : null}
+
+            {isCarriedForwardToToday ? (
+              <span
+                title={`Carried over from ${task.originalDate}`}
+                className="rounded bg-amber-100 px-1.5 py-px text-[10px] font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-400"
+              >
                 carried over
               </span>
             ) : null}
+
             {isSkipped && !task.completed ? (
               <button
                 type="button"
