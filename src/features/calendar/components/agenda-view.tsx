@@ -50,8 +50,10 @@ export function AgendaView({ startDate, tasks, onTaskClick, onDateClick }: Agend
         if (dayTasks.length === 0) return null;
         const { day, month, year } = parseDateParts(dateKey);
         const isToday = dateKey === today;
+        const isPast = dateKey < today;
         const dow = weekdayIndex(dateKey);
-        const carryCount = dayTasks.filter((t) => t.isCarriedForward).length;
+        const carryCount = isToday ? dayTasks.filter((t) => t.isCarriedForward).length : 0;
+        const notDoneCount = isPast ? dayTasks.filter((t) => !t.completed && !t.skippedAt).length : 0;
 
         return (
           <div key={dateKey} className="mb-4 flex gap-4">
@@ -81,9 +83,14 @@ export function AgendaView({ startDate, tasks, onTaskClick, onDateClick }: Agend
               <p className="mt-0.5 text-[10px] text-muted-foreground">
                 {SHORT_MONTH_NAMES[month - 1]} {year}
               </p>
+              {notDoneCount > 0 ? (
+                <span className="mt-1 inline-block rounded-full bg-rose-100 px-1.5 py-px text-[9px] font-semibold text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
+                  {notDoneCount} not done
+                </span>
+              ) : null}
               {carryCount > 0 ? (
                 <span className="mt-1 inline-block rounded-full bg-amber-100 px-1.5 py-px text-[9px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-                  +{carryCount}
+                  +{carryCount} carried
                 </span>
               ) : null}
             </div>
@@ -91,7 +98,7 @@ export function AgendaView({ startDate, tasks, onTaskClick, onDateClick }: Agend
             {/* Tasks */}
             <div className="flex-1 space-y-1.5 pt-1">
               {dayTasks.map((task) => (
-                <CalendarTaskChip key={task.id} task={task} onClick={onTaskClick} />
+                <CalendarTaskChip key={task.id} task={task} cellDate={dateKey} onClick={onTaskClick} />
               ))}
             </div>
           </div>
