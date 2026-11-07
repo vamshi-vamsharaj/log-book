@@ -14,6 +14,7 @@ export const APP_ROUTES = {
   notes: "/notes",
   journal: "/journal",
   analytics: "/analytics",
+  expenses: "/expenses",
   settings: "/settings",
 } as const;
 
