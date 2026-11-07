@@ -35,6 +35,7 @@ model User {
   sessions Session[]
   accounts Account[]
   tasks    Task[]
+  expenses Expense[]
 
   @@index([email])
   @@map("users")
@@ -142,4 +143,54 @@ model Subtask {
 
   @@index([taskId])
   @@map("subtasks")
+}
+
+enum TransactionType {
+  LENT
+  BORROWED
+  EXPENSE
+}
+
+enum RepaymentStatus {
+  PENDING
+  PARTIALLY_REPAID
+  FULLY_REPAID
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  userId      String
+  personName  String
+  type        TransactionType @default(LENT)
+  amount      Float
+  date        String
+  dueDate     String?
+  note        String?
+  status      RepaymentStatus @default(PENDING)
+  deletedAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repayments  Repayment[]
+
+  @@index([userId, date])
+  @@index([userId, status])
+  @@index([userId, personName])
+  @@map("expenses")
+}
+
+model Repayment {
+  id        String   @id @default(cuid())
+  expenseId String
+  amount    Float
+  date      String
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@index([expenseId])
+  @@map("repayments")
 }
