@@ -1,10 +1,11 @@
 "use client";
 
 import { Clock, Plus } from "lucide-react";
+import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { localDateKey } from "@/lib/period";
-import { getTasksForDay, formatTime, formatDuration, parseDateParts, FULL_WEEKDAY_LABELS, MONTH_NAMES, WEEKDAY_LABELS } from "@/features/calendar/utils";
+import { getTasksForDay, formatTime, parseDateParts, FULL_WEEKDAY_LABELS, MONTH_NAMES } from "@/features/calendar/utils";
 import { weekdayIndex } from "@/lib/period";
 import { CalendarTaskChip } from "@/features/calendar/components/calendar-task-chip";
 import type { CalendarTaskDTO } from "@/features/calendar/hooks/use-calendar-tasks";
@@ -14,11 +15,13 @@ interface DayViewProps {
   tasks: CalendarTaskDTO[];
   onTaskClick: (task: CalendarTaskDTO) => void;
   onAddTask: (dateKey: string) => void;
+  onDropTask?: (taskId: string, targetDateKey: string) => void;
 }
 
-export function DayView({ dateKey, tasks, onTaskClick, onAddTask }: DayViewProps) {
+export function DayView({ dateKey, tasks, onTaskClick, onAddTask, onDropTask }: DayViewProps) {
   const today = localDateKey();
   const isToday = dateKey === today;
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const { year, month, day } = parseDateParts(dateKey);
   const dow = weekdayIndex(dateKey);
 
@@ -29,11 +32,11 @@ export function DayView({ dateKey, tasks, onTaskClick, onAddTask }: DayViewProps
   const unscheduled = dayTasks.filter((t) => !t.scheduledTime);
 
   const isPast = dateKey < today;
+  const carryForward = dayTasks.filter(
+    (t) => Boolean(t.scheduledDate) && t.scheduledDate! < dateKey && !t.completed && !t.skippedAt,
+  );
   const uncompletedPast = isPast
-    ? dayTasks.filter((t) => !t.completed && !t.skippedAt)
-    : [];
-  const carryForward = isToday
-    ? dayTasks.filter((t) => t.isCarriedForward)
+    ? dayTasks.filter((t) => t.scheduledDate === dateKey && !t.completed && !t.skippedAt)
     : [];
   const completedCount = dayTasks.filter((t) => t.completed).length;
 
@@ -92,7 +95,26 @@ export function DayView({ dateKey, tasks, onTaskClick, onAddTask }: DayViewProps
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          setIsDraggingOver(true);
+        }}
+        onDragLeave={() => setIsDraggingOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDraggingOver(false);
+          const taskId = e.dataTransfer.getData("text/plain");
+          if (taskId && onDropTask) {
+            onDropTask(taskId, dateKey);
+          }
+        }}
+        className={cn(
+          "flex-1 overflow-y-auto px-6 py-4 space-y-6 transition-colors",
+          isDraggingOver && "ring-2 ring-primary ring-inset bg-primary/5",
+        )}
+      >
         {/* Timed tasks */}
         {scheduled.length > 0 ? (
           <section>
