@@ -45,11 +45,12 @@ export function CalendarTaskChip({ task, cellDate, compact, onClick }: CalendarT
     !task.completed &&
     !isSkipped;
 
-  // Is this chip rendered on today as a carried-over task from an earlier date?
-  const isCarriedForwardToToday =
-    (cellDate ? cellDate === today : task.isCarriedForward) &&
+  // Is this chip rendered on a subsequent day (after original date, up through today) as a carried-forward task?
+  const isCarriedForward =
+    Boolean(cellDate) &&
     Boolean(task.scheduledDate) &&
-    task.scheduledDate! < today &&
+    task.scheduledDate! < cellDate! &&
+    cellDate! <= today &&
     !task.completed &&
     !isSkipped;
 
@@ -79,7 +80,7 @@ export function CalendarTaskChip({ task, cellDate, compact, onClick }: CalendarT
       title={
         isOriginalPastUncompleted
           ? `Scheduled for ${task.scheduledDate} but was not completed • Carried forward`
-          : isCarriedForwardToToday
+          : isCarriedForward
             ? `Carried forward from ${task.originalDate}`
             : task.title
       }
@@ -90,7 +91,7 @@ export function CalendarTaskChip({ task, cellDate, compact, onClick }: CalendarT
           ? "border-border/40 bg-muted/50 text-muted-foreground/60"
           : isOriginalPastUncompleted
             ? "border-l-2 border-l-rose-500 border-t-border/40 border-r-border/40 border-b-border/40 bg-rose-50/50 text-foreground dark:bg-rose-950/25"
-            : isCarriedForwardToToday
+            : isCarriedForward
               ? "border-l-2 border-l-amber-500 border-t-border/40 border-r-border/40 border-b-border/40 bg-amber-50/50 text-foreground dark:bg-amber-950/20"
               : isSkipped
                 ? "border-border/40 bg-muted/30 text-muted-foreground/70"
@@ -140,9 +141,9 @@ export function CalendarTaskChip({ task, cellDate, compact, onClick }: CalendarT
             </span>
           ) : null}
 
-          {compact && isCarriedForwardToToday ? (
+          {compact && isCarriedForward ? (
             <span
-              title="Carried over from earlier day"
+              title={`Carried over from ${task.originalDate}`}
               className="inline-flex shrink-0 items-center rounded bg-amber-100 px-1 py-px text-[9px] font-semibold text-amber-700 dark:bg-amber-950/70 dark:text-amber-300"
             >
               Carried
@@ -170,7 +171,7 @@ export function CalendarTaskChip({ task, cellDate, compact, onClick }: CalendarT
               </span>
             ) : null}
 
-            {isCarriedForwardToToday ? (
+            {isCarriedForward ? (
               <span
                 title={`Carried over from ${task.originalDate}`}
                 className="rounded bg-amber-100 px-1.5 py-px text-[10px] font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-400"
