@@ -52,8 +52,12 @@ export function AgendaView({ startDate, tasks, onTaskClick, onDateClick }: Agend
         const isToday = dateKey === today;
         const isPast = dateKey < today;
         const dow = weekdayIndex(dateKey);
-        const carryCount = isToday ? dayTasks.filter((t) => t.isCarriedForward).length : 0;
-        const notDoneCount = isPast ? dayTasks.filter((t) => !t.completed && !t.skippedAt).length : 0;
+        const carryCount = dayTasks.filter(
+          (t) => Boolean(t.scheduledDate) && t.scheduledDate! < dateKey && !t.completed && !t.skippedAt,
+        ).length;
+        const notDoneCount = isPast
+          ? dayTasks.filter((t) => t.scheduledDate === dateKey && !t.completed && !t.skippedAt).length
+          : 0;
 
         return (
           <div key={dateKey} className="mb-4 flex gap-4">
