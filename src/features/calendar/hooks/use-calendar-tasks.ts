@@ -115,3 +115,52 @@ export function useCalendarCreateTask() {
     },
   });
 }
+
+export function useUnscheduledTasks() {
+  return useQuery({
+    queryKey: ["tasks", "unscheduled"],
+    queryFn: () => api.get<TaskDTO[]>("/api/tasks/unscheduled"),
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useCreateUnscheduledTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      title,
+      estimatedMinutes,
+    }: {
+      title: string;
+      estimatedMinutes?: number | null;
+    }) => api.post<TaskDTO>("/api/tasks/unscheduled", { title, estimatedMinutes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", "unscheduled"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+export function useScheduleTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      scheduledDate,
+      scheduledTime,
+    }: {
+      id: string;
+      scheduledDate: string | null;
+      scheduledTime?: string | null;
+    }) =>
+      api.patch<TaskDTO>(`/api/tasks/${id}`, {
+        scheduledDate,
+        scheduledTime: scheduledTime ?? null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", "unscheduled"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
