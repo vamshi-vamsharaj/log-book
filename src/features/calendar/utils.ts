@@ -1,4 +1,4 @@
-import { addDays, localDateKey, periodKeyFor, weekdayIndex } from "@/lib/period";
+import { addDays, localDateKey, weekdayIndex } from "@/lib/period";
 import type { CalendarTaskDTO } from "@/features/calendar/hooks/use-calendar-tasks";
 
 export const MONTH_NAMES = [
@@ -17,7 +17,6 @@ export const FULL_WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday"
 /** Returns a date range for a month view — always 6 weeks. */
 export function getMonthGrid(year: number, month: number): string[] {
   // month is 1-indexed
-  const firstDay = new Date(Date.UTC(year, month - 1, 1));
   const firstDateKey = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`;
 
   // ISO weekday index of the first day (0=Mon, 6=Sun)
@@ -74,8 +73,11 @@ export function groupTasksByDate(
   return map;
 }
 
-/** Returns tasks visible on a given day: those originally scheduled for that day +
- *  carried-forward uncompleted tasks that appear on today. */
+/** Returns tasks visible on a given day:
+ *  1. Tasks originally scheduled for that day.
+ *  2. Tasks carried forward: uncompleted, unskipped tasks originally scheduled before this date
+ *     that continue to appear on every day from their original date through the current date (today).
+ */
 export function getTasksForDay(
   tasks: CalendarTaskDTO[],
   dateKey: string,
@@ -85,9 +87,14 @@ export function getTasksForDay(
     if (!task.scheduledDate) return false;
     // 1. Task originally scheduled for this date
     if (task.scheduledDate === dateKey) return true;
-    // 2. Carried-forward task: appears on TODAY (the active day needing attention)
-    //    if originally scheduled before today and not yet completed or skipped
-    if (task.isCarriedForward && dateKey === today && !task.completed && !task.skippedAt) {
+    // 2. Carried-forward task: appears on every day from its original scheduled date through today
+    //    as long as it remains incomplete and unskipped
+    if (
+      task.scheduledDate < dateKey &&
+      dateKey <= today &&
+      !task.completed &&
+      !task.skippedAt
+    ) {
       return true;
     }
     return false;
