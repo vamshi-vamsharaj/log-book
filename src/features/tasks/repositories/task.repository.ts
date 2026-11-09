@@ -96,6 +96,19 @@ export function listPeriodTasks(
   });
 }
 
+export function listUnscheduledTasks(userId: string, tx: Tx = db) {
+  return tx.task.findMany({
+    where: {
+      userId,
+      scheduledDate: null,
+      deletedAt: null,
+      completed: false,
+    },
+    select: TASK_SELECT,
+    orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+  });
+}
+
 export function listUnfinishedInPeriod(
   userId: string,
   level: PlanningLevel,
