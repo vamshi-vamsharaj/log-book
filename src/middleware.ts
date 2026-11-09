@@ -13,6 +13,7 @@ const PROTECTED_PREFIXES = [
   "/analytics",
   "/settings",
   "/tasks",
+  "/expenses",
 ];
 const AUTH_ROUTES = ["/sign-in", "/sign-up"];
 
@@ -55,6 +56,7 @@ export const config = {
     "/analytics/:path*",
     "/settings/:path*",
     "/tasks/:path*",
+    "/expenses/:path*",
     "/sign-in",
     "/sign-up",
   ],
