@@ -159,6 +159,10 @@ export async function listPeriodTasks(
   return repo.listPeriodTasks(userId, level, periodKey, includeCompleted);
 }
 
+export async function listUnscheduledTasks(userId: string) {
+  return repo.listUnscheduledTasks(userId);
+}
+
 async function assertOwnedActive(userId: string, taskId: string) {
   const task = await repo.findOwnedTask(userId, taskId);
   if (!task || task.deletedAt) {
