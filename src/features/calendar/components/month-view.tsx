@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { localDateKey } from "@/lib/period";
@@ -15,11 +15,13 @@ interface MonthViewProps {
   tasks: CalendarTaskDTO[];
   onTaskClick: (task: CalendarTaskDTO) => void;
   onDateClick: (dateKey: string) => void;
+  onDropTask?: (taskId: string, targetDateKey: string) => void;
 }
 
-export function MonthView({ year, month, tasks, onTaskClick, onDateClick }: MonthViewProps) {
+export function MonthView({ year, month, tasks, onTaskClick, onDateClick, onDropTask }: MonthViewProps) {
   const today = localDateKey();
   const dates = useMemo(() => getMonthGrid(year, month), [year, month]);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   const tasksByDay = useMemo(() => {
     const map = new Map<string, CalendarTaskDTO[]>();
@@ -49,6 +51,7 @@ export function MonthView({ year, month, tasks, onTaskClick, onDateClick }: Mont
           const { day, month: cellMonth } = parseDateParts(dateKey);
           const isCurrentMonth = cellMonth === month;
           const isToday = dateKey === today;
+          const isDraggingOver = dragOverDate === dateKey;
           const dayTasks = tasksByDay.get(dateKey) ?? [];
           const MAX_VISIBLE = 3;
           const visibleTasks = dayTasks.slice(0, MAX_VISIBLE);
@@ -57,10 +60,27 @@ export function MonthView({ year, month, tasks, onTaskClick, onDateClick }: Mont
           return (
             <div
               key={dateKey}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (dragOverDate !== dateKey) setDragOverDate(dateKey);
+              }}
+              onDragLeave={() => {
+                if (dragOverDate === dateKey) setDragOverDate(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverDate(null);
+                const taskId = e.dataTransfer.getData("text/plain");
+                if (taskId && onDropTask) {
+                  onDropTask(taskId, dateKey);
+                }
+              }}
               className={cn(
                 "group/cell border-b border-r border-border min-h-[100px] p-1.5 cursor-pointer transition-colors",
                 !isCurrentMonth && "bg-muted/20",
                 isToday && "bg-primary/5",
+                isDraggingOver && "ring-2 ring-primary ring-inset bg-primary/10",
                 "hover:bg-accent/30",
               )}
               onClick={() => onDateClick(dateKey)}
