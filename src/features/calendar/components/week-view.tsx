@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { localDateKey } from "@/lib/period";
@@ -14,11 +14,13 @@ interface WeekViewProps {
   tasks: CalendarTaskDTO[];
   onTaskClick: (task: CalendarTaskDTO) => void;
   onDateClick: (dateKey: string) => void;
+  onDropTask?: (taskId: string, targetDateKey: string) => void;
 }
 
-export function WeekView({ weekStartDate, tasks, onTaskClick, onDateClick }: WeekViewProps) {
+export function WeekView({ weekStartDate, tasks, onTaskClick, onDateClick, onDropTask }: WeekViewProps) {
   const today = localDateKey();
   const days = useMemo(() => getWeekDays(weekStartDate), [weekStartDate]);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   const tasksByDay = useMemo(() => {
     const map = new Map<string, CalendarTaskDTO[]>();
@@ -71,14 +73,32 @@ export function WeekView({ weekStartDate, tasks, onTaskClick, onDateClick }: Wee
       <div className="grid grid-cols-7 flex-1 min-h-0 overflow-y-auto">
         {days.map((dateKey) => {
           const isToday = dateKey === today;
+          const isDraggingOver = dragOverDate === dateKey;
           const dayTasks = tasksByDay.get(dateKey) ?? [];
 
           return (
             <div
               key={dateKey}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (dragOverDate !== dateKey) setDragOverDate(dateKey);
+              }}
+              onDragLeave={() => {
+                if (dragOverDate === dateKey) setDragOverDate(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverDate(null);
+                const taskId = e.dataTransfer.getData("text/plain");
+                if (taskId && onDropTask) {
+                  onDropTask(taskId, dateKey);
+                }
+              }}
               className={cn(
                 "group/col border-r border-border last:border-r-0 p-2 cursor-pointer transition-colors min-h-[300px]",
                 isToday ? "bg-primary/5" : "hover:bg-accent/20",
+                isDraggingOver && "ring-2 ring-primary ring-inset bg-primary/10",
               )}
               onClick={() => onDateClick(dateKey)}
             >
