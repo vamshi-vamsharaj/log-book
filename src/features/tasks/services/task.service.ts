@@ -171,6 +171,10 @@ async function assertOwnedActive(userId: string, taskId: string) {
   return task;
 }
 
+export async function getTask(userId: string, taskId: string) {
+  return assertOwnedActive(userId, taskId);
+}
+
 export async function updateTask(userId: string, taskId: string, input: UpdateTaskInput) {
   await assertOwnedActive(userId, taskId);
 

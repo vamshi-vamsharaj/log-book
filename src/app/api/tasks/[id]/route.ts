@@ -10,6 +10,17 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+export async function GET(_request: NextRequest, { params }: RouteParams) {
+  try {
+    const user = await requireApiUser();
+    const { id } = await params;
+    const task = await taskService.getTask(user.id, id);
+    return NextResponse.json(task);
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}
+
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await requireApiUser();
