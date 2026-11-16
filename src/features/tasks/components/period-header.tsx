@@ -11,6 +11,7 @@ interface PeriodHeaderProps {
   periodKey: string;
   todayKey: string;
   onNavigate: (periodKey: string) => void;
+  actions?: React.ReactNode;
 }
 
 const LEVEL_ACCENT: Record<PlanningLevel, string> = {
@@ -27,7 +28,7 @@ const LEVEL_ACCENT: Record<PlanningLevel, string> = {
  * consistent identity (useful when switching between them quickly) without
  * resorting to loud color-coding of the whole page.
  */
-export function PeriodHeader({ level, periodKey, todayKey, onNavigate }: PeriodHeaderProps) {
+export function PeriodHeader({ level, periodKey, todayKey, onNavigate, actions }: PeriodHeaderProps) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
@@ -83,6 +84,7 @@ export function PeriodHeader({ level, periodKey, todayKey, onNavigate }: PeriodH
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
+        {actions}
       </div>
     </div>
   );
