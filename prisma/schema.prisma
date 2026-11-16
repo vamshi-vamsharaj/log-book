@@ -32,10 +32,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  sessions Session[]
-  accounts Account[]
-  tasks    Task[]
-  expenses Expense[]
+  sessions   Session[]
+  accounts   Account[]
+  tasks      Task[]
+  expenses   Expense[]
+  categories Category[]
+  labels     Label[]
+  tags       Tag[]
 
   @@index([email])
   @@map("users")
@@ -119,10 +122,12 @@ model Task {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sourceTask Task?     @relation("TaskDerivation", fields: [sourceTaskId], references: [id], onDelete: SetNull)
-  derived    Task[]    @relation("TaskDerivation")
-  subtasks   Subtask[]
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceTask Task?         @relation("TaskDerivation", fields: [sourceTaskId], references: [id], onDelete: SetNull)
+  derived     Task[]        @relation("TaskDerivation")
+  subtasks    Subtask[]
+  reminder    TaskReminder?
+  timeEntries TaskTimeEntry[]
 
   @@index([userId, level, periodKey, deletedAt])
   @@index([userId, scheduledDate])
@@ -210,4 +215,79 @@ model Repayment {
 
   @@index([expenseId])
   @@map("repayments")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("categories")
+}
+
+model Label {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("labels")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}
+
+model TaskReminder {
+  id             String    @id @default(cuid())
+  taskId         String    @unique
+  enabled        Boolean   @default(false)
+  offsetMinutes  Int?
+  customRemindAt DateTime?
+  remindAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_reminders")
+}
+
+model TaskTimeEntry {
+  id              String    @id @default(cuid())
+  taskId          String
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_time_entries")
 }

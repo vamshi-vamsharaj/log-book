@@ -60,7 +60,7 @@ async function main() {
     },
   });
 
-  console.log("✅ Seed complete. Demo user:", user.email, "| Launch task:", launchTask.id);
+  console.warn("✅ Seed complete. Demo user:", user.email, "| Launch task:", launchTask.id);
 }
 
 function getIsoWeek(date: Date): number {
