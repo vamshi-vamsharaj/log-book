@@ -185,6 +185,12 @@ export async function updateTask(userId: string, taskId: string, input: UpdateTa
   if (input.remindAt !== undefined) {
     data.remindAt = input.remindAt ? new Date(input.remindAt) : null;
   }
+  if (input.scheduledDate !== undefined && input.scheduledDate !== null) {
+    const existing = await repo.findOwnedTask(userId, taskId);
+    if (existing?.level === "DAY") {
+      data.periodKey = input.scheduledDate;
+    }
+  }
 
   return repo.updateTask(taskId, data);
 }

@@ -75,6 +75,7 @@ export function listPeriodTasks(
       userId,
       level,
       deletedAt: null,
+      ...(level === "DAY" ? { scheduledDate: { not: null } } : {}),
       ...(isViewingTodayDayPlanner
         ? {
             OR: [
