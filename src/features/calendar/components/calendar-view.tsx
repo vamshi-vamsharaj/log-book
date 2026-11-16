@@ -39,7 +39,7 @@ const VIEW_LABELS: Record<CalendarViewMode, string> = {
 
 export function CalendarView() {
   const today = localDateKey();
-  const [view, setView] = useState<CalendarViewMode>("week");
+  const [view, setView] = useState<CalendarViewMode>("month");
   const [currentDate, setCurrentDate] = useState(today); // anchor date for navigation
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
