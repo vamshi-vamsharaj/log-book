@@ -13,12 +13,13 @@ interface ExpenseStatsProps {
 export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
   const cards = [
     {
-      title: "Total Lent",
-      value: stats ? formatCurrency(stats.totalLent) : "₹0",
-      description: `${stats?.totalTransactionsCount ?? 0} active people`,
-      icon: HandCoins,
-      color: "text-blue-600 dark:text-blue-400",
-      bg: "bg-blue-50 dark:bg-blue-950/40",
+      title: "Outstanding",
+      value: stats ? formatCurrency(stats.totalOutstanding) : "₹0",
+      description: "Remaining to be collected",
+      icon: Clock,
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-50 dark:bg-amber-950/40",
+      highlight: true,
     },
     {
       title: "Recovered",
@@ -29,13 +30,12 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
       bg: "bg-emerald-50 dark:bg-emerald-950/40",
     },
     {
-      title: "Outstanding",
-      value: stats ? formatCurrency(stats.totalOutstanding) : "₹0",
-      description: "Remaining to be collected",
-      icon: Clock,
-      color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-50 dark:bg-amber-950/40",
-      highlight: true,
+      title: "Total Lent",
+      value: stats ? formatCurrency(stats.totalLent) : "₹0",
+      description: `${stats?.totalTransactionsCount ?? 0} active people`,
+      icon: HandCoins,
+      color: "text-blue-600 dark:text-blue-400",
+      bg: "bg-blue-50 dark:bg-blue-950/40",
     },
     {
       title: "Active Borrowers",
