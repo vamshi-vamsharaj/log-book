@@ -126,6 +126,10 @@ export function localDateKey(date: Date = new Date()): DateKey {
   return formatYmd({ y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() });
 }
 
+export function getDayKey(date: Date = new Date()): string {
+  return localDateKey(date);
+}
+
 export function dateKeyToUtcDate(key: DateKey): Date {
   const { y, m, d } = requireYmd(key);
   return new Date(utcMs(y, m, d));
@@ -192,6 +196,10 @@ export function periodKeyFor(level: PlanningLevel, dateKey: DateKey): string {
     case "YEAR":
       return pad(y, 4);
   }
+}
+
+export function getPeriodKey(level: PlanningLevel, date: Date = new Date()): string {
+  return periodKeyFor(level, localDateKey(date));
 }
 
 export function getPeriodRange(
