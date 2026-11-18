@@ -48,7 +48,7 @@ export function TaskForm({ task, onSuccess }: TaskFormProps) {
   const { data: tags } = useTags();
 
   const createTask = useCreateTask();
-  const updateTask = useUpdateTask(task?.id ?? "");
+  const updateTask = useUpdateTask();
   const createTag = useCreateTag();
 
 
@@ -59,11 +59,11 @@ export function TaskForm({ task, onSuccess }: TaskFormProps) {
   const { register, handleSubmit, watch, setValue, formState } = useForm<TaskFormValues>({
     defaultValues: {
       title: task?.title ?? "",
-      description: task?.description ?? "",
+      description: typeof task?.description === "string" ? task.description : "",
       priority: task?.priority ?? "MEDIUM",
       categoryId: task?.category?.id ?? "",
-      labelIds: task?.labels.map((label) => label.id) ?? [],
-      tagIds: task?.tags.map((tag) => tag.id) ?? [],
+      labelIds: task?.labels?.map((label) => label.id) ?? [],
+      tagIds: task?.tags?.map((tag) => tag.id) ?? [],
       dueDate: task?.dueDate ? task.dueDate.slice(0, 10) : "",
       targetTime: task?.targetTime ?? "",
       estimatedMinutes: task?.estimatedMinutes ? String(task.estimatedMinutes) : "",
@@ -127,7 +127,7 @@ export function TaskForm({ task, onSuccess }: TaskFormProps) {
 
     try {
       const savedTask = isEdit
-        ? await updateTask.mutateAsync(parsed.data)
+        ? await updateTask.mutateAsync({ id: task!.id, input: parsed.data })
         : await createTask.mutateAsync(parsed.data);
 
       const targetTaskId = savedTask.id;

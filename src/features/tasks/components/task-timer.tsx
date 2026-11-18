@@ -33,7 +33,7 @@ interface TaskTimerProps {
 }
 
 export function TaskTimer({ task }: TaskTimerProps) {
-  const [liveSeconds, setLiveSeconds] = useState(task.actualSeconds);
+  const [liveSeconds, setLiveSeconds] = useState(task.actualSeconds ?? 0);
   const start = useStartTimer();
   const pause = usePauseTimer();
   const resume = useResumeTimer();
@@ -43,7 +43,7 @@ export function TaskTimer({ task }: TaskTimerProps) {
   const isTerminal = task.status === "COMPLETED" || task.status === "CANCELLED" || task.status === "ARCHIVED";
 
   useEffect(() => {
-    setLiveSeconds(task.actualSeconds);
+    setLiveSeconds(task.actualSeconds ?? 0);
 
     if (!task.activeTimeEntry) {
       return;
@@ -52,7 +52,7 @@ export function TaskTimer({ task }: TaskTimerProps) {
     const startedAt = new Date(task.activeTimeEntry.startedAt).getTime();
 
     const interval = setInterval(() => {
-      const baseSeconds = task.actualSeconds - Math.floor((Date.now() - startedAt) / 1000);
+      const baseSeconds = (task.actualSeconds ?? 0) - Math.floor((Date.now() - startedAt) / 1000);
       setLiveSeconds(baseSeconds + Math.floor((Date.now() - startedAt) / 1000));
     }, 1000);
 
@@ -87,11 +87,11 @@ export function TaskTimer({ task }: TaskTimerProps) {
           {!isRunning ? (
             <Button
               size="sm"
-              onClick={() => (task.actualSeconds > 0 ? resume.mutate(task.id) : start.mutate(task.id))}
+              onClick={() => ((task.actualSeconds ?? 0) > 0 ? resume.mutate(task.id) : start.mutate(task.id))}
               disabled={start.isPending || resume.isPending}
             >
               <Play className="mr-1.5 h-3.5 w-3.5" />
-              {task.actualSeconds > 0 ? "Resume" : "Start"}
+              {(task.actualSeconds ?? 0) > 0 ? "Resume" : "Start"}
             </Button>
           ) : (
             <>

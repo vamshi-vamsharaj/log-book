@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { TaskFilters } from "@/features/tasks/components/task-filters";
 import { TaskFormDialog } from "@/features/tasks/components/task-form-dialog";
 import { TaskRow } from "@/features/tasks/components/task-row";
+import { useToggleComplete, useUpdateTask } from "@/features/tasks/mutations/use-task-mutations";
 import { useTasks } from "@/features/tasks/queries/use-tasks";
 import type { ListTasksQuery } from "@/features/tasks/schemas/task.schema";
+import type { TaskDTO } from "@/features/tasks/types";
+import type { TaskDTO as PlannerTaskDTO } from "@/features/tasks/hooks/use-planner-tasks";
 
 const DEFAULT_FILTERS: Partial<ListTasksQuery> = {
   archived: false,
@@ -18,20 +21,67 @@ const DEFAULT_FILTERS: Partial<ListTasksQuery> = {
   limit: 20,
 };
 
+function toPlannerTask(task: TaskDTO): PlannerTaskDTO {
+  return {
+    id: task.id,
+    userId: task.userId,
+    level: task.level,
+    periodKey: task.periodKey ?? "",
+    order: task.order ?? 0,
+    title: task.title,
+    description: typeof task.description === "object" ? task.description : null,
+    completed: task.completed,
+    completedAt: task.completedAt,
+    estimatedMinutes: task.estimatedMinutes,
+    scheduledDate: task.scheduledDate,
+    scheduledTime: task.scheduledTime,
+    remindAt: task.remindAt,
+    sourceTaskId: task.sourceTaskId ?? null,
+    sourceLinkType: task.sourceLinkType ?? null,
+    skippedAt: task.skippedAt ?? null,
+    deletedAt: task.deletedAt,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    subtasks: (task.subtasks ?? []).map((s) => ({
+      id: s.id,
+      title: s.title,
+      completed: s.completed,
+      order: s.order,
+    })),
+  };
+}
+
 export function TaskList() {
   const [filters, setFilters] = useState<Partial<ListTasksQuery>>(DEFAULT_FILTERS);
   const [formOpen, setFormOpen] = useState(false);
-  const { data, isLoading, isError } = useTasks(filters);
+  const [selectedTask, setSelectedTask] = useState<TaskDTO | null>(null);
 
+  const { data, isLoading, isError } = useTasks(filters);
+  const toggleComplete = useToggleComplete();
+  const updateTask = useUpdateTask();
+
+  const tasks: TaskDTO[] = Array.isArray(data) ? data : [];
+  const total = tasks.length;
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 20;
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / limit)) : 1;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const pagedTasks = tasks.slice((page - 1) * limit, page * limit);
+
+  function handleOpenCreate() {
+    setSelectedTask(null);
+    setFormOpen(true);
+  }
+
+  function handleOpenEdit(task: TaskDTO) {
+    setSelectedTask(task);
+    setFormOpen(true);
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <TaskFilters filters={filters} onChange={setFilters} />
-        <Button size="sm" onClick={() => setFormOpen(true)}>
+        <Button size="sm" onClick={handleOpenCreate}>
           <Plus className="mr-1.5 h-4 w-4" />
           New task
         </Button>
@@ -50,24 +100,30 @@ export function TaskList() {
         </div>
       ) : null}
 
-      {data && data.tasks.length === 0 ? (
+      {!isLoading && !isError && tasks.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
           No tasks match your filters yet.
         </div>
       ) : null}
 
-      {data && data.tasks.length > 0 ? (
+      {!isLoading && !isError && tasks.length > 0 ? (
         <div className="space-y-2">
-          {data.tasks.map((task) => (
-            <TaskRow key={task.id} task={task} />
+          {pagedTasks.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={toPlannerTask(task)}
+              onToggleComplete={(id, completed) => toggleComplete.mutate({ id, completed })}
+              onTitleCommit={(id, title) => updateTask.mutate({ id, input: { title } })}
+              onOpen={() => handleOpenEdit(task)}
+            />
           ))}
         </div>
       ) : null}
 
-      {data && data.total > limit ? (
+      {total > limit ? (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            Page {page} of {totalPages} · {data.total} tasks
+            Page {page} of {totalPages} · {total} tasks
           </span>
           <div className="flex gap-2">
             <Button
@@ -90,7 +146,12 @@ export function TaskList() {
         </div>
       ) : null}
 
-      <TaskFormDialog mode="create" open={formOpen} onOpenChange={setFormOpen} />
+      <TaskFormDialog
+        mode={selectedTask ? "edit" : "create"}
+        task={selectedTask ?? undefined}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+      />
     </div>
   );
 }

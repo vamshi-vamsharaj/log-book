@@ -8,6 +8,7 @@ import { QuickAdd } from "@/features/tasks/components/quick-add";
 import { TaskItem } from "@/features/tasks/components/task-item";
 import { TaskPeek } from "@/features/tasks/components/task-peek";
 import { useTasks } from "@/features/tasks/queries/use-tasks";
+import type { RichTextDoc } from "@/lib/description";
 import { getDayKey, getPeriodKey, type PlanningLevel } from "@/lib/period";
 
 interface TaskBoardProps {
@@ -25,6 +26,35 @@ export function TaskBoard({ level }: TaskBoardProps) {
 
   const dayTasks =
     level === "DAY" ? (tasks ?? []).filter((task) => task.scheduledDate?.slice(0, 10) === getDayKey(date)) : tasks ?? [];
+
+  const openTask = (tasks ?? []).find((t) => t.id === openTaskId) ?? null;
+  const peekTask = openTask
+    ? {
+        id: openTask.id,
+        userId: openTask.userId,
+        level: openTask.level,
+        periodKey: openTask.periodKey ?? periodKey,
+        order: openTask.order ?? 0,
+        title: openTask.title,
+        description:
+          typeof openTask.description === "object"
+            ? (openTask.description as RichTextDoc | null)
+            : null,
+        completed: openTask.completed,
+        completedAt: openTask.completedAt,
+        estimatedMinutes: openTask.estimatedMinutes,
+        scheduledDate: openTask.scheduledDate,
+        scheduledTime: openTask.scheduledTime,
+        remindAt: openTask.remindAt,
+        sourceTaskId: openTask.sourceTaskId ?? null,
+        sourceLinkType: openTask.sourceLinkType ?? null,
+        skippedAt: openTask.skippedAt ?? null,
+        deletedAt: openTask.deletedAt,
+        createdAt: openTask.createdAt,
+        updatedAt: openTask.updatedAt,
+        subtasks: openTask.subtasks ?? [],
+      }
+    : null;
 
   return (
     <div className="space-y-4">
@@ -53,7 +83,7 @@ export function TaskBoard({ level }: TaskBoardProps) {
         </div>
       )}
 
-      <TaskPeek taskId={openTaskId} onClose={() => setOpenTaskId(null)} />
+      <TaskPeek task={peekTask} level={level} periodKey={periodKey} onClose={() => setOpenTaskId(null)} />
     </div>
   );
 }

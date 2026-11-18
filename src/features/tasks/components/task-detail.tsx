@@ -47,15 +47,15 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">{task.title}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <TaskStatusBadge status={task.status} />
-            <TaskPriorityBadge priority={task.priority} />
+            <TaskStatusBadge status={task.status ?? (task.completed ? "COMPLETED" : "TODO")} />
+            <TaskPriorityBadge priority={task.priority ?? "MEDIUM"} />
             {task.category ? <Badge variant="outline">{task.category.name}</Badge> : null}
-            {task.labels.map((label) => (
-              <Badge key={label.id} style={{ backgroundColor: label.color, color: "white" }}>
+            {(task.labels ?? []).map((label) => (
+              <Badge key={label.id} style={{ backgroundColor: label.color ?? undefined, color: "white" }}>
                 {label.name}
               </Badge>
             ))}
-            {task.tags.map((tag) => (
+            {(task.tags ?? []).map((tag) => (
               <Badge key={tag.id} variant="secondary">
                 #{tag.name}
               </Badge>
@@ -81,7 +81,9 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       </div>
 
       {task.description ? (
-        <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>
+        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+          {typeof task.description === "string" ? task.description : JSON.stringify(task.description)}
+        </p>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -105,7 +107,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
 
       <div className="space-y-2">
         <h2 className="text-sm font-semibold">
-          Subtasks {task.subtaskSummary.total > 0 ? `(${task.subtaskSummary.completed}/${task.subtaskSummary.total})` : ""}
+          Subtasks {task.subtaskSummary ? (task.subtaskSummary.total > 0 ? `(${task.subtaskSummary.completed}/${task.subtaskSummary.total})` : "") : ""}
         </h2>
         <SubtaskList taskId={task.id} />
       </div>
