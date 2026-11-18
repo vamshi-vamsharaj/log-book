@@ -34,7 +34,7 @@ async function assertSubtaskOwnership(userId: string, taskId: string, subtaskId:
   await assertTaskOwnership(userId, taskId);
   const subtask = await subtaskRepository.findSubtaskById(subtaskId);
 
-  if (!subtask || subtask.parentId !== taskId) {
+  if (!subtask || subtask.taskId !== taskId) {
     throw AppError.notFound("Subtask not found");
   }
 

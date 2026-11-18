@@ -1,29 +1,26 @@
 import { db } from "@/lib/db";
 
 export async function findSubtasksByTaskId(taskId: string) {
-  return db.task.findMany({
-    where: { parentId: taskId, deletedAt: null },
+  return db.subtask.findMany({
+    where: { taskId },
     orderBy: { order: "asc" },
   });
 }
 
 export async function findSubtaskById(subtaskId: string) {
-  return db.task.findFirst({ where: { id: subtaskId, deletedAt: null } });
+  return db.subtask.findFirst({ where: { id: subtaskId } });
 }
 
 export async function createSubtask(
-  userId: string,
+  _userId: string,
   taskId: string,
   data: { title: string; description?: string | null; order: number },
 ) {
-  return db.task.create({
+  return db.subtask.create({
     data: {
-      userId,
-      parentId: taskId,
+      taskId,
       title: data.title,
-      description: data.description ?? null,
       order: data.order,
-      level: "DAY", // Default level for subtasks
     },
   });
 }
@@ -32,25 +29,30 @@ export async function updateSubtask(
   subtaskId: string,
   data: { title?: string; description?: string | null; completed?: boolean; order?: number },
 ) {
-  return db.task.update({ where: { id: subtaskId }, data });
+  const updateData: { title?: string; completed?: boolean; order?: number } = {};
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.completed !== undefined) updateData.completed = data.completed;
+  if (data.order !== undefined) updateData.order = data.order;
+
+  return db.subtask.update({ where: { id: subtaskId }, data: updateData });
 }
 
 export async function deleteSubtask(subtaskId: string) {
-  return db.task.update({ where: { id: subtaskId }, data: { deletedAt: new Date() } });
+  return db.subtask.delete({ where: { id: subtaskId } });
 }
 
 export async function countSubtaskProgress(taskId: string) {
   const [total, completed] = await Promise.all([
-    db.task.count({ where: { parentId: taskId, deletedAt: null } }),
-    db.task.count({ where: { parentId: taskId, completed: true, deletedAt: null } }),
+    db.subtask.count({ where: { taskId } }),
+    db.subtask.count({ where: { taskId, completed: true } }),
   ]);
 
   return { total, completed };
 }
 
 export async function getNextSubtaskOrder(taskId: string) {
-  const last = await db.task.findFirst({
-    where: { parentId: taskId, deletedAt: null },
+  const last = await db.subtask.findFirst({
+    where: { taskId },
     orderBy: { order: "desc" },
   });
   return (last?.order ?? -1) + 1;
