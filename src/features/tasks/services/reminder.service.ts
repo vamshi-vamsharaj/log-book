@@ -28,7 +28,8 @@ export async function setReminder(userId: string, taskId: string, input: UpdateR
     if (input.customRemindAt) {
       remindAt = input.customRemindAt;
     } else if (input.offsetMinutes !== undefined && input.offsetMinutes !== null) {
-      const target = combineDueDateAndTargetTime(task.dueDate, task.targetTime);
+      const dueDate = task.scheduledDate ? new Date(task.scheduledDate) : null;
+      const target = combineDueDateAndTargetTime(dueDate, task.scheduledTime);
 
       if (!target) {
         throw AppError.invalidStateTransition(

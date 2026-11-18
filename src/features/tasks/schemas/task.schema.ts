@@ -45,6 +45,15 @@ export const listTasksQuerySchema = z.object({
   periodKey: z.string().max(20).optional(),
   scheduledOnly: z.coerce.boolean().optional(),
   unscheduledOnly: z.coerce.boolean().optional(),
+  search: z.string().optional(),
+  status: z.string().optional(),
+  priority: z.string().optional(),
+  categoryId: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
+  archived: z.coerce.boolean().optional(),
+  page: z.coerce.number().optional(),
+  limit: z.coerce.number().optional(),
 });
 
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>;

@@ -5,6 +5,9 @@ export const taskKeys = {
   details: () => [...taskKeys.all, "detail"] as const,
   detail: (id: string) => [...taskKeys.details(), id] as const,
   suggestions: (dateKey: string) => [...taskKeys.all, "suggestions", dateKey] as const,
+  reminder: (id: string) => [...taskKeys.all, "reminder", id] as const,
+  subtasks: (id: string) => [...taskKeys.all, "subtasks", id] as const,
+  timer: (id: string) => [...taskKeys.all, "timer", id] as const,
 };
 
 export const linkPreviewKeys = {
